@@ -1,24 +1,5 @@
 import ollama
-import pandas as pd
-
-
-df = pd.read_csv("./data/memotion_dataset_7k/labels.csv")
-
-
-df["humour"] = df["humour"].replace(
-    ["hilarious", "very_funny", "funny"],
-    "funny"
-)
-
-df["sarcasm"] = df["sarcasm"].replace(
-    ["twisted_meaning", "very_twisted"],
-    "twisted"
-)
-
-df["offensive"] = df["offensive"].replace(
-    ["very_offensive", "slight", "hateful_offensive"],
-    "offensive"
-)
+from classic_analysis.data_preparation import df
 
 
 print(df.loc[45])
