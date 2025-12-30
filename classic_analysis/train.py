@@ -5,7 +5,7 @@ from transformers import (
     TrainingArguments
 )
 
-from data_preparation import data_preparation
+from data_preparation import data_prep
 
 
 class BertHumourTrainer:
@@ -35,24 +35,24 @@ class BertHumourTrainer:
 
     def tokenize(self, batch):
         return self.tokenizer(
-            batch[data_preparation.label_column],
+            batch[data_prep.label_column],
             padding="max_length",
             truncation=True,
             max_length=self.max_length
         )
 
     def prepare_datasets(self):
-        data_preparation.prepare_data()
-        train, test = data_preparation.split_to_test_and_train()
+        data_prep.prepare_data()
+        train, test = data_prep.split_to_test_and_train()
 
         train_ds = train.map(self.tokenize, batched=True)
         test_ds = test.map(self.tokenize, batched=True)
 
         train_ds = train_ds.rename_column(
-            data_preparation.column_to_classify, "labels"
+            data_prep.column_to_classify, "labels"
         )
         test_ds = test_ds.rename_column(
-            data_preparation.column_to_classify, "labels"
+            data_prep.column_to_classify, "labels"
         )
 
         train_ds.set_format(
@@ -67,7 +67,7 @@ class BertHumourTrainer:
         return train_ds, test_ds
 
     def build_model(self):
-        num_labels = len(data_preparation.encoder.classes_)
+        num_labels = len(data_prep.encoder.classes_)
         self.model = AutoModelForSequenceClassification.from_pretrained(
             self.model_name,
             num_labels=num_labels

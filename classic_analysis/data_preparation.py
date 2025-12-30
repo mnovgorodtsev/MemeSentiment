@@ -4,7 +4,7 @@ from datasets import Dataset
 
 
 class DataPreparation:
-    def __init__(self, path="../data/memotion_dataset_7k/labels.csv", column_to_classify="humour"):
+    def __init__(self, path="./data/memotion_dataset_7k/labels.csv", column_to_classify="humour"):
         self.df = pd.read_csv(path)
         self.columns_to_drop = ["Unnamed: 0", "text_ocr", "overall_sentiment"]
         self.column_to_classify = column_to_classify
@@ -56,4 +56,4 @@ class DataPreparation:
         return self.df
 
 
-data_preparation = DataPreparation()
+data_prep = DataPreparation()

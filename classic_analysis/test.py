@@ -1,6 +1,6 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from data_preparation import data_preparation
+from data_preparation import data_prep
 
 
 MODEL_PATH = "./bert_humour_model"
@@ -33,8 +33,8 @@ with torch.no_grad():
     logits = outputs.logits
     predicted_class_id = torch.argmax(logits, dim=-1).item()
 
-data_preparation.prepare_data()
-encoder = data_preparation.encoder
+data_prep.prepare_data()
+encoder = data_prep.encoder
 label_name = encoder.inverse_transform([predicted_class_id])[0]
 
 print(f"predicted humour class: {label_name}")
