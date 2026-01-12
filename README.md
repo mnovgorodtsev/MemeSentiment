@@ -1,4 +1,4 @@
-# Sentiment Analysis of Internet Memes: Classical Multimodal Methods vs Vision-Language Large Models
+# MemSen: Classical Multimodal Methods vs Vision-Language Large Models
 
 ## Project Overview
 
@@ -25,7 +25,7 @@ The project is divided into **two main research parts**, both reflected in this 
 
 ---
 
-## Part I — Classical Multimodal Sentiment Analysis
+## Part I - Classical Multimodal Sentiment Analysis
 
 This part focuses on building a traditional multimodal representation and fusion pipeline.
 
@@ -48,7 +48,7 @@ This part focuses on building a traditional multimodal representation and fusion
 
 ---
 
-## Part II — Vision-Language Large Models (VLLMs)
+## Part II - Vision-Language Large Models (VLLMs)
 
 This part is dedicated to an in-depth study of modern Vision-Language Large Models and their behavior in meme sentiment analysis tasks.
 
@@ -74,7 +74,7 @@ Instead of a single sentiment label, VLLMs are prompted to estimate **probabilis
 
 ---
 
-## Proof of Concept — Web Application
+## Proof of Concept - Web Application
 
 As the final stage of the project, a **proof-of-concept web application** is developed.
 
