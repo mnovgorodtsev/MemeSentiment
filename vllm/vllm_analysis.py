@@ -1,8 +1,4 @@
 import ollama
-from classic_analysis.data_preparation import data_prep
-
-
-print(data_prep.loc[45])
 
 
 prompts = ["Classify if this mem is funny or not funny. Return only class: funny or not funny",
