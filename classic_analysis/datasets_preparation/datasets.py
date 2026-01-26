@@ -2,13 +2,12 @@ import os
 import torch
 from torch.utils.data import Dataset
 from PIL import Image
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 
 
 def _load_and_split_data(csv_path, test_size=0.1, random_state=42):
-    import pandas as pd
-    from sklearn.model_selection import train_test_split
-    from sklearn.preprocessing import LabelEncoder
-
     df = pd.read_csv(csv_path)
     df = df.dropna(subset=["text_corrected", "humour", "image_name"])
 
@@ -33,30 +32,23 @@ def _load_and_split_data(csv_path, test_size=0.1, random_state=42):
 
 
 class BertHumourDataset(Dataset):
-    def __init__(self, df, tokenizer, max_length=128):
+    def __init__(self, df):
         self.df = df
-        self.tokenizer = tokenizer
-        self.max_length = max_length
 
     def __len__(self):
         return len(self.df)
 
     def __getitem__(self, idx):
-        text = self.df.loc[idx, "text_corrected"]
-        label = int(self.df.loc[idx, "humour"])
+        row = self.df.iloc[idx]
 
-        encoding = self.tokenizer(
-            text,
-            padding="max_length",
-            truncation=True,
-            max_length=self.max_length,
-            return_tensors="pt"
-        )
+        input_ids = torch.tensor(row["input_ids"], dtype=torch.long)
+        attention_mask = torch.tensor(row["attention_mask"], dtype=torch.long)
+        label = torch.tensor(row["humour"], dtype=torch.long)
 
         return {
-            "input_ids": encoding["input_ids"].squeeze(0),
-            "attention_mask": encoding["attention_mask"].squeeze(0),
-            "labels": torch.tensor(label, dtype=torch.long)
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "labels": label
         }
 
 

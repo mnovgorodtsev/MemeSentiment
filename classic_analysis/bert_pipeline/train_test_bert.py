@@ -13,11 +13,11 @@ class BertHumourTorchTrainer:
         model_name="bert-base-uncased",
         save_path="./bert_humour_model",
         max_length=128,
-        batch_size=8,
+        batch_size=32,
         epochs=3,
         learning_rate=2e-5,
         weight_decay=0.01,
-        num_workers=2,
+        num_workers=4,
         test=False
     ):
         self.csv_path = csv_path
@@ -35,19 +35,22 @@ class BertHumourTorchTrainer:
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
         self.train_df, self.test_df, self.encoder = _load_and_split_data(csv_path)
+        self.set_tokenizers()
 
         self.train_loader = DataLoader(
-            BertHumourDataset(self.train_df, self.tokenizer, max_length),
+            BertHumourDataset(self.train_df),
             batch_size=batch_size,
             shuffle=True,
-            num_workers=num_workers
+            num_workers=num_workers,
+            pin_memory=True
         )
 
         self.test_loader = DataLoader(
-            BertHumourDataset(self.test_df, self.tokenizer, max_length),
+            BertHumourDataset(self.test_df),
             batch_size=batch_size,
             shuffle=False,
-            num_workers=num_workers
+            num_workers=num_workers,
+            pin_memory=True
         )
 
         self.model = AutoModelForSequenceClassification.from_pretrained(
@@ -66,6 +69,13 @@ class BertHumourTorchTrainer:
         if test:
             self.load_model()
 
+    def set_tokenizers(self):
+        for feature in ["input_ids", "attention_mask"]:
+            for df_set in [self.train_df, self.test_df]:
+                df_set[f"{feature}"] = list(df_set["text_corrected"].apply(
+                    lambda x: self.tokenizer(x, padding="max_length", truncation=True, max_length=self.max_length)[
+                        f"{feature}"]
+                ))
 
     def train(self):
         self.model.train()
@@ -150,7 +160,7 @@ if __name__ == "__main__":
     trainer = BertHumourTorchTrainer(
         csv_path="../../data/memotion_dataset_7k/labels.csv",
         epochs=4,
-        batch_size=8
+        batch_size=32
     )
 
     trainer.train()
