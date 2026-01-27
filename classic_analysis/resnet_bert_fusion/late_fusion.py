@@ -24,10 +24,19 @@ class ResnetWrapper(nn.Module):
 
 
 class BertWrapper(nn.Module):
-    def __init__(self, model_path, device="cpu"):
+    def __init__(self, model_path, device="cpu", num_labels=2):
         super().__init__()
         self.device = device
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_path).to(self.device)
+
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            "bert-base-uncased",
+            num_labels=num_labels
+        )
+
+        state_dict = torch.load(model_path, map_location=device)
+        self.model.load_state_dict(state_dict)
+
+        self.model.to(self.device)
         self.model.eval()
 
     def forward(self, input_ids, attention_mask):
@@ -54,7 +63,7 @@ class LateFusionEvaluator:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(bert_path)
+        self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
@@ -99,7 +108,7 @@ if __name__ == "__main__":
         csv_path="../../data/memotion_dataset_7k/new_labels.csv",
         images_dir="../../data/memotion_dataset_7k/images",
         resnet_path="../resnet_pipeline/resnet_model/resnet_model.pth",
-        bert_path="../bert_pipeline/bert_humour_model",
+        bert_path="../bert_pipeline/bert_model/bert_humour_model.pt",
         batch_size=16
     )
 

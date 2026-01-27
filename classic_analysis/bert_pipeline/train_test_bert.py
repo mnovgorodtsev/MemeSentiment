@@ -11,7 +11,7 @@ class BertHumourTorchTrainer:
         self,
         csv_path,
         model_name="bert-base-uncased",
-        save_path="./bert_humour_model",
+        save_path="./bert_model/bert_humour_model",
         max_length=128,
         batch_size=32,
         epochs=3,
@@ -98,7 +98,8 @@ class BertHumourTorchTrainer:
 
                 total_loss += loss.item()
 
-            print(f"Epoch {epoch+1}/{self.epochs} - Loss: {total_loss:.4f}")
+            avg_loss = total_loss / len(self.train_loader)
+            print(f"Epoch {epoch + 1}/{self.epochs} - Loss: {avg_loss:.4f}")
 
         self.save_model()
 
@@ -160,8 +161,9 @@ if __name__ == "__main__":
     trainer = BertHumourTorchTrainer(
         csv_path="../../data/memotion_dataset_7k/labels.csv",
         epochs=4,
-        batch_size=32
+        batch_size=32,
+        test=True,
     )
 
-    trainer.train()
-    # trainer.test()
+    # trainer.train()
+    trainer.test()
