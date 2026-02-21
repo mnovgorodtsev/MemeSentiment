@@ -1,68 +1,161 @@
 import torch
 import torch.nn as nn
 from torchvision.models import resnet18
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from transformers import AutoTokenizer, AutoModel
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-
 from classic_analysis.datasets_preparation import _load_and_split_data, FusionDataset
 
 
 class ResnetWrapper(nn.Module):
+
     def __init__(self, model_path, device="cpu"):
         super().__init__()
+
         self.device = device
-        self.model = resnet18()
-        self.model.fc = nn.Linear(self.model.fc.in_features, 2)
-        self.model.load_state_dict(torch.load(model_path, map_location=device))
-        self.model.to(self.device)
-        self.model.eval()
+
+        base = resnet18()
+        in_features = base.fc.in_features
+        base.fc = nn.Identity()
+
+        self.base = base
+
+        self.heads = nn.ModuleDict({
+            "humour": nn.Linear(in_features, 2),
+            "sarcasm": nn.Linear(in_features, 2),
+            "offensive": nn.Linear(in_features, 2),
+            "motivational": nn.Linear(in_features, 2)
+        })
+
+        state_dict = torch.load(model_path, map_location=device)
+        self.load_state_dict(state_dict)
+
+        self.to(device)
+        self.eval()
 
     def forward(self, x):
-        return self.model(x)
+
+        features = self.base(x)
+
+        logits = {
+            task: head(features)
+            for task, head in self.heads.items()
+        }
+
+        return logits
 
 
 class BertWrapper(nn.Module):
-    def __init__(self, model_path, device="cpu", num_labels=2):
+
+    def __init__(self, model_path, device="cpu"):
         super().__init__()
+
         self.device = device
 
-        self.model = AutoModelForSequenceClassification.from_pretrained(
-            "bert-base-uncased",
-            num_labels=num_labels
-        )
+        self.base = AutoModel.from_pretrained("bert-base-uncased")
 
-        state_dict = torch.load(model_path, map_location=device)
-        self.model.load_state_dict(state_dict)
+        hidden = self.base.config.hidden_size
 
-        self.model.to(self.device)
-        self.model.eval()
+        self.heads = nn.ModuleDict({
+            "humour": nn.Linear(hidden, 2),
+            "sarcasm": nn.Linear(hidden, 2),
+            "offensive": nn.Linear(hidden, 2),
+            "motivational": nn.Linear(hidden, 2)
+        })
+
+        checkpoint = torch.load(model_path, map_location=device, weights_only=False)
+        new_state_dict = self.rename_heads(checkpoint["model_state_dict"])
+
+        self.load_state_dict(new_state_dict)
+
+        self.to(device)
+        self.eval()
+
+    def rename_heads(self, state_dict):
+        new_state_dict = {}
+        for k, v in state_dict.items():
+            if k.startswith("bert."):
+                k = k.replace("bert.", "base.")
+            if k.startswith("humour_head"):
+                k = k.replace("humour_head", "heads.humour")
+            if k.startswith("sarcasm_head"):
+                k = k.replace("sarcasm_head", "heads.sarcasm")
+            if k.startswith("offensive_head"):
+                k = k.replace("offensive_head", "heads.offensive")
+            if k.startswith("motivational_head"):
+                k = k.replace("motivational_head", "heads.motivational")
+            new_state_dict[k] = v
+        return new_state_dict
 
     def forward(self, input_ids, attention_mask):
-        return self.model(input_ids=input_ids, attention_mask=attention_mask).logits
+
+        outputs = self.base(
+            input_ids=input_ids,
+            attention_mask=attention_mask
+        )
+
+        cls = outputs.last_hidden_state[:, 0]
+
+        logits = {
+            task: head(cls)
+            for task, head in self.heads.items()
+        }
+
+        return logits
 
 
 class LateFusionModel(nn.Module):
+
     def __init__(self, resnet_path, bert_path, device="cpu", w_image=0.5, w_text=0.5):
         super().__init__()
+
         self.device = device
-        self.image_model = ResnetWrapper(resnet_path, device=device)
-        self.text_model = BertWrapper(bert_path, device=device)
+
+        self.image_model = ResnetWrapper(resnet_path, device)
+        self.text_model = BertWrapper(bert_path, device)
+
         self.w_image = w_image
         self.w_text = w_text
 
-    def forward(self, image, input_ids, attention_mask):
-        logits_img = self.image_model(image)
-        logits_txt = self.text_model(input_ids, attention_mask)
-        return self.w_image * logits_img + self.w_text * logits_txt
+        self.tasks = ["humour", "sarcasm", "offensive", "motivational"]
 
+    def forward(self, image, input_ids, attention_mask):
+
+        img_logits = self.image_model(image)
+        txt_logits = self.text_model(input_ids, attention_mask)
+
+        fused = {}
+
+        for task in img_logits.keys():
+            fused[task] = (
+                self.w_image * img_logits[task] +
+                self.w_text * txt_logits[task]
+            )
+
+        return fused
+    
 
 class LateFusionEvaluator:
-    def __init__(self, csv_path, images_dir, resnet_path, bert_path, batch_size=16, test_size=0.1, random_state=42):
+
+    def __init__(
+        self,
+        csv_path,
+        images_dir,
+        resnet_path,
+        bert_path,
+        batch_size=16,
+    ):
+
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        # tokenizer
+        self.tasks = [
+            "humour",
+            "sarcasm",
+            "offensive",
+            "motivational"
+        ]
+
         self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 
         self.transform = transforms.Compose([
@@ -74,41 +167,99 @@ class LateFusionEvaluator:
             )
         ])
 
-        _, test_df, _ = _load_and_split_data(csv_path, test_size=test_size, random_state=random_state)
+        _, test_df, _ = _load_and_split_data(
+            csv_path,
+        )
 
-        self.dataset = FusionDataset(test_df, images_dir, self.tokenizer, self.transform)
-        self.loader = DataLoader(self.dataset, batch_size=batch_size, shuffle=False)
+        self.dataset = FusionDataset(
+            test_df,
+            images_dir,
+            self.tokenizer,
+            self.transform
+        )
 
-        self.model = LateFusionModel(resnet_path, bert_path, device=self.device).to(self.device)
+        self.loader = DataLoader(
+            self.dataset,
+            batch_size=batch_size,
+            shuffle=False
+        )
+
+        self.model = LateFusionModel(
+            resnet_path,
+            bert_path,
+            device=self.device
+        ).to(self.device)
 
     def evaluate(self):
-        y_true, y_pred = [], []
+
+        y_true = {task: [] for task in self.tasks}
+        y_pred = {task: [] for task in self.tasks}
 
         self.model.eval()
+
         with torch.no_grad():
+
             for batch in self.loader:
+
                 images = batch["image"].to(self.device)
                 input_ids = batch["input_ids"].to(self.device)
                 attention_mask = batch["attention_mask"].to(self.device)
-                labels = batch["label"].to(self.device)
 
-                logits = self.model(images, input_ids, attention_mask)
-                preds = torch.argmax(logits, dim=1)
+                labels = batch["labels"]
 
-                y_true.extend(labels.cpu().numpy())
-                y_pred.extend(preds.cpu().numpy())
+                logits = self.model(
+                    images,
+                    input_ids,
+                    attention_mask
+                )
 
-        print("Accuracy:", accuracy_score(y_true, y_pred))
-        print(classification_report(y_true, y_pred, digits=4))
-        print("Confusion matrix:\n", confusion_matrix(y_true, y_pred))
+                for task in self.tasks:
+
+                    preds = torch.argmax(logits[task], dim=1)
+
+                    y_pred[task].extend(
+                        preds.cpu().numpy()
+                    )
+
+                    y_true[task].extend(
+                        labels[task].cpu().numpy()
+                    )
+
+        for task in self.tasks:
+
+            print(f"\n===== {task.upper()} =====")
+
+            acc = accuracy_score(
+                y_true[task],
+                y_pred[task]
+            )
+
+            print("Accuracy:", acc)
+
+            print(
+                classification_report(
+                    y_true[task],
+                    y_pred[task],
+                    digits=4,
+                    zero_division=0
+                )
+            )
+
+            print("Confusion matrix:")
+            print(
+                confusion_matrix(
+                    y_true[task],
+                    y_pred[task]
+                )
+            )
 
 
 if __name__ == "__main__":
     evaluator = LateFusionEvaluator(
-        csv_path="../../data/memotion_dataset_7k/new_labels.csv",
-        images_dir="../../data/memotion_dataset_7k/images",
-        resnet_path="../resnet_pipeline/resnet_model/resnet_model.pth",
-        bert_path="../bert_pipeline/bert_model/bert_humour_model.pt",
+        csv_path="data/memotion_dataset_7k/labels.csv",
+        images_dir="data/memotion_dataset_7k/images",
+        resnet_path="models/resnet_multitask_model/model.pth",
+        bert_path="models/bert_multitask_model/model.pt",
         batch_size=16
     )
 
