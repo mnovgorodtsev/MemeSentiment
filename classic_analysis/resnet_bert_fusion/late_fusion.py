@@ -1,14 +1,16 @@
 import torch
 import torch.nn as nn
 from torchvision.models import resnet18
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoModel, AutoTokenizer
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
 from classic_analysis.datasets_preparation import _load_and_split_data, FusionDataset
+from classic_analysis.base import MultiTaskModel
 
 
-class ResnetWrapper(nn.Module):
+class ResnetWrapper(MultiTaskModel):
 
     def __init__(self, model_path, device="cpu"):
         super().__init__()
@@ -22,10 +24,8 @@ class ResnetWrapper(nn.Module):
         self.base = base
 
         self.heads = nn.ModuleDict({
-            "humour": nn.Linear(in_features, 2),
-            "sarcasm": nn.Linear(in_features, 2),
-            "offensive": nn.Linear(in_features, 2),
-            "motivational": nn.Linear(in_features, 2)
+            task: nn.Linear(in_features, 2)
+            for task in self.tasks
         })
 
         state_dict = torch.load(model_path, map_location=device)
@@ -34,78 +34,56 @@ class ResnetWrapper(nn.Module):
         self.to(device)
         self.eval()
 
-    def forward(self, x):
+    def forward(self, images):
 
-        features = self.base(x)
+        features = self.base(images)
 
-        logits = {
-            task: head(features)
-            for task, head in self.heads.items()
+        return {
+            task: self.heads[task](features)
+            for task in self.tasks
         }
 
-        return logits
 
-
-class BertWrapper(nn.Module):
+class BertWrapper(MultiTaskModel):
 
     def __init__(self, model_path, device="cpu"):
         super().__init__()
 
         self.device = device
 
-        self.base = AutoModel.from_pretrained("bert-base-uncased")
+        self.encoder = AutoModel.from_pretrained("bert-base-uncased")
+        hidden = self.encoder.config.hidden_size
 
-        hidden = self.base.config.hidden_size
+        self.dropout = nn.Dropout(0.1)
 
         self.heads = nn.ModuleDict({
-            "humour": nn.Linear(hidden, 2),
-            "sarcasm": nn.Linear(hidden, 2),
-            "offensive": nn.Linear(hidden, 2),
-            "motivational": nn.Linear(hidden, 2)
+            task: nn.Linear(hidden, 2)
+            for task in self.tasks
         })
 
-        checkpoint = torch.load(model_path, map_location=device, weights_only=False)
-        new_state_dict = self.rename_heads(checkpoint["model_state_dict"])
-
-        self.load_state_dict(new_state_dict)
+        state_dict = torch.load(model_path, map_location=device)
+        self.load_state_dict(state_dict)
 
         self.to(device)
         self.eval()
 
-    def rename_heads(self, state_dict):
-        new_state_dict = {}
-        for k, v in state_dict.items():
-            if k.startswith("bert."):
-                k = k.replace("bert.", "base.")
-            if k.startswith("humour_head"):
-                k = k.replace("humour_head", "heads.humour")
-            if k.startswith("sarcasm_head"):
-                k = k.replace("sarcasm_head", "heads.sarcasm")
-            if k.startswith("offensive_head"):
-                k = k.replace("offensive_head", "heads.offensive")
-            if k.startswith("motivational_head"):
-                k = k.replace("motivational_head", "heads.motivational")
-            new_state_dict[k] = v
-        return new_state_dict
-
     def forward(self, input_ids, attention_mask):
 
-        outputs = self.base(
+        outputs = self.encoder(
             input_ids=input_ids,
             attention_mask=attention_mask
         )
 
         cls = outputs.last_hidden_state[:, 0]
+        cls = self.dropout(cls)
 
-        logits = {
-            task: head(cls)
-            for task, head in self.heads.items()
+        return {
+            task: self.heads[task](cls)
+            for task in self.tasks
         }
 
-        return logits
 
-
-class LateFusionModel(nn.Module):
+class LateFusionModel(MultiTaskModel):
 
     def __init__(self, resnet_path, bert_path, device="cpu", w_image=0.5, w_text=0.5):
         super().__init__()
@@ -118,8 +96,6 @@ class LateFusionModel(nn.Module):
         self.w_image = w_image
         self.w_text = w_text
 
-        self.tasks = ["humour", "sarcasm", "offensive", "motivational"]
-
     def forward(self, image, input_ids, attention_mask):
 
         img_logits = self.image_model(image)
@@ -127,14 +103,14 @@ class LateFusionModel(nn.Module):
 
         fused = {}
 
-        for task in img_logits.keys():
+        for task in self.tasks:
             fused[task] = (
                 self.w_image * img_logits[task] +
                 self.w_text * txt_logits[task]
             )
 
         return fused
-    
+
 
 class LateFusionEvaluator:
 
@@ -144,7 +120,7 @@ class LateFusionEvaluator:
         images_dir,
         resnet_path,
         bert_path,
-        batch_size=16,
+        batch_size=16
     ):
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -167,9 +143,7 @@ class LateFusionEvaluator:
             )
         ])
 
-        _, test_df, _ = _load_and_split_data(
-            csv_path,
-        )
+        _, test_df, _ = _load_and_split_data(csv_path)
 
         self.dataset = FusionDataset(
             test_df,
@@ -217,13 +191,8 @@ class LateFusionEvaluator:
 
                     preds = torch.argmax(logits[task], dim=1)
 
-                    y_pred[task].extend(
-                        preds.cpu().numpy()
-                    )
-
-                    y_true[task].extend(
-                        labels[task].cpu().numpy()
-                    )
+                    y_pred[task].extend(preds.cpu().numpy())
+                    y_true[task].extend(labels[task].cpu().numpy())
 
         for task in self.tasks:
 
@@ -255,11 +224,12 @@ class LateFusionEvaluator:
 
 
 if __name__ == "__main__":
+
     evaluator = LateFusionEvaluator(
         csv_path="data/memotion_dataset_7k/labels.csv",
         images_dir="data/memotion_dataset_7k/images",
-        resnet_path="models/resnet_multitask_model/model.pth",
-        bert_path="models/bert_multitask_model/model.pt",
+        resnet_path="./models/resnet_multitask_model/model_weights.pt",
+        bert_path="./models/bert_multitask_model/model_weights.pt",
         batch_size=16
     )
 
