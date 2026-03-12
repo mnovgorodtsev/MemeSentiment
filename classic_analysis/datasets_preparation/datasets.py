@@ -1,11 +1,11 @@
 import os
 import torch
 from torch.utils.data import Dataset
-from PIL import Image
+from PIL import Image, ImageFile
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 def _load_and_split_data(csv_path):
 
