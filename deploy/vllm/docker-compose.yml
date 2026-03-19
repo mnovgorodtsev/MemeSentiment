@@ -4,7 +4,6 @@ services:
     image: ollama/ollama
     volumes:
       - ollama:/root/.ollama
-
     gpus: all
 
     entrypoint: >
@@ -23,8 +22,8 @@ services:
 
   app:
     build:
-      context: ..
-      dockerfile: deploy/Dockerfile
+      context: ../..
+      dockerfile: deploy/vllm/Dockerfile
     depends_on:
       - ollama
     environment:

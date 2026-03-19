@@ -1,0 +1,15 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+data
+models
+*.pt
+*.bin
+*.safetensors
+
+node_modules
+.env
