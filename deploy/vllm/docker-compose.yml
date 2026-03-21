@@ -1,0 +1,35 @@
+services:
+
+  ollama:
+    image: ollama/ollama
+    volumes:
+      - ollama:/root/.ollama
+    gpus: all
+
+    entrypoint: >
+      /bin/sh -c "
+      ollama serve &
+      sleep 10 &&
+      ollama pull qwen3-vl:2b &&
+      wait
+      "
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/health"]
+      interval: 10s
+      retries: 60
+      timeout: 5s
+
+  app:
+    build:
+      context: ../..
+      dockerfile: deploy/vllm/Dockerfile
+    depends_on:
+      - ollama
+    environment:
+      OLLAMA_HOST: "http://ollama:11434"
+    ports:
+      - "7860:7860"
+
+volumes:
+  ollama:
