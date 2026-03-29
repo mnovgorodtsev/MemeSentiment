@@ -1,6 +1,5 @@
 from classic_analysis.resnet_bert_fusion.late_fusion.model import LateFusionTrainer
 
-
 if __name__ == "__main__":
 
     trainer = LateFusionTrainer(

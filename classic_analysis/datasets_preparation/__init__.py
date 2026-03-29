@@ -1,3 +1,13 @@
-__all__ = ['MemotionDataset', 'ImageMultiTaskDataset', 'FusionDataset', '_load_and_split_data']
+__all__ = [
+    "MemotionDataset",
+    "ImageMultiTaskDataset",
+    "FusionDataset",
+    "_load_and_split_data",
+]
 
-from .datasets import MemotionDataset, ImageMultiTaskDataset, FusionDataset, _load_and_split_data
+from .datasets import (
+    FusionDataset,
+    ImageMultiTaskDataset,
+    MemotionDataset,
+    _load_and_split_data,
+)

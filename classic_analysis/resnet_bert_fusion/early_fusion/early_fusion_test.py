@@ -1,6 +1,5 @@
 from classic_analysis.resnet_bert_fusion.early_fusion.model import EarlyFusionTrainer
 
-
 if __name__ == "__main__":
     trainer = EarlyFusionTrainer(
         csv_path="data/memotion_dataset_7k/labels.csv",

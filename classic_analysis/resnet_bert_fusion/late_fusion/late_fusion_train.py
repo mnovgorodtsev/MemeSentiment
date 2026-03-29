@@ -1,13 +1,12 @@
 from classic_analysis.resnet_bert_fusion.late_fusion.model import LateFusionTrainer
 
-
 if __name__ == "__main__":
 
     hyperparams = [
         {"w_image": round(w / 10, 1), "w_text": round(1 - w / 10, 1)}
         for w in range(1, 10)
     ]
-    
+
     trainer = LateFusionTrainer(
         csv_path="data/memotion_dataset_7k/labels.csv",
         images_dir="data/memotion_dataset_7k/images",

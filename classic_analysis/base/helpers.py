@@ -1,19 +1,21 @@
 import os
+
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-from PIL import Image
-
 import torch
+from PIL import Image
 from sklearn.metrics import (
     accuracy_score,
-    precision_recall_fscore_support,
     classification_report,
     confusion_matrix,
+    precision_recall_fscore_support,
 )
+from tqdm import tqdm
 
 
-def save_results_csv(results: list[dict], path: str = "./results/resnet/training_results.csv") -> None:
+def save_results_csv(
+    results: list[dict], path: str = "./results/resnet/training_results.csv"
+) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     pd.DataFrame(results).to_csv(path, index=False)
     print(f"Results saved to {path}")
@@ -40,7 +42,7 @@ def compute_mean_std(
         stds.append(img.std(axis=(0, 1)))
 
     mean = torch.tensor(np.mean(means, axis=0), dtype=torch.float32)
-    std  = torch.tensor(np.mean(stds,  axis=0), dtype=torch.float32)
+    std = torch.tensor(np.mean(stds, axis=0), dtype=torch.float32)
 
     torch.save({"mean": mean, "std": std}, cache_path)
     print(f"Mean/std cached to {cache_path}.")

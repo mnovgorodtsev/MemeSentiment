@@ -15,8 +15,8 @@ from classic_analysis.datasets_preparation import FusionDataset, _load_and_split
 
 def fusion_unpack(batch: dict, device: str) -> tuple[dict, dict]:
     inputs = {
-        "image":          batch["image"].to(device),
-        "input_ids":      batch["input_ids"].to(device),
+        "image": batch["image"].to(device),
+        "input_ids": batch["input_ids"].to(device),
         "attention_mask": batch["attention_mask"].to(device),
     }
     labels = {task: batch["labels"][task] for task in batch["labels"]}
@@ -30,9 +30,9 @@ class ResnetWrapper(MultiTaskModel):
         in_features = base.fc.in_features
         base.fc = nn.Identity()
         self.base = base
-        self.heads = nn.ModuleDict({
-            task: nn.Linear(in_features, 2) for task in self.tasks
-        })
+        self.heads = nn.ModuleDict(
+            {task: nn.Linear(in_features, 2) for task in self.tasks}
+        )
         self.load_state_dict(torch.load(model_path, map_location=device))
         self.to(device)
         self.eval()
@@ -47,17 +47,16 @@ class BertWrapper(MultiTaskModel):
         self.encoder = AutoModel.from_pretrained("bert-base-uncased")
         hidden = self.encoder.config.hidden_size
         self.dropout = nn.Dropout(0.1)
-        self.heads = nn.ModuleDict({
-            task: nn.Linear(hidden, 2) for task in self.tasks
-        })
+        self.heads = nn.ModuleDict({task: nn.Linear(hidden, 2) for task in self.tasks})
         self.load_state_dict(torch.load(model_path, map_location=device))
         self.to(device)
         self.eval()
 
     def forward(self, input_ids, attention_mask, **kwargs):
         cls = self.dropout(
-            self.encoder(input_ids=input_ids, attention_mask=attention_mask)
-            .last_hidden_state[:, 0]
+            self.encoder(
+                input_ids=input_ids, attention_mask=attention_mask
+            ).last_hidden_state[:, 0]
         )
         return {task: self.heads[task](cls) for task in self.tasks}
 
@@ -71,13 +70,13 @@ class LateFusionModel(MultiTaskModel):
         w_text: float = 0.5,
     ) -> None:
         super().__init__()
-        self.device       = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self._resnet_path = resnet_path
-        self._bert_path   = bert_path
-        self.w_image      = w_image
-        self.w_text       = w_text
-        self.image_model  = ResnetWrapper(resnet_path, self.device)
-        self.text_model   = BertWrapper(bert_path, self.device)
+        self._bert_path = bert_path
+        self.w_image = w_image
+        self.w_text = w_text
+        self.image_model = ResnetWrapper(resnet_path, self.device)
+        self.text_model = BertWrapper(bert_path, self.device)
 
     def forward(self, image, input_ids, attention_mask, **kwargs):
         img_logits = self.image_model(image)
@@ -90,12 +89,16 @@ class LateFusionModel(MultiTaskModel):
     def save(self, path: str) -> None:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as f:
-            json.dump({
-                "resnet_path": self._resnet_path,
-                "bert_path":   self._bert_path,
-                "w_image":     self.w_image,
-                "w_text":      self.w_text,
-            }, f, indent=2)
+            json.dump(
+                {
+                    "resnet_path": self._resnet_path,
+                    "bert_path": self._bert_path,
+                    "w_image": self.w_image,
+                    "w_text": self.w_text,
+                },
+                f,
+                indent=2,
+            )
 
     @classmethod
     def load(cls, path: str) -> "LateFusionModel":
@@ -116,19 +119,19 @@ class LateFusionTrainer:
         mlflow_experiment: str = "LateFusion_GridSearch",
         use_mlflow: bool = True,
     ) -> None:
-        self.images_dir        = images_dir
-        self.resnet_path       = resnet_path
-        self.bert_path         = bert_path
-        self.batch_size        = batch_size
-        self.save_path         = save_path
-        self.results_path      = results_path
+        self.images_dir = images_dir
+        self.resnet_path = resnet_path
+        self.bert_path = bert_path
+        self.batch_size = batch_size
+        self.save_path = save_path
+        self.results_path = results_path
         self.mlflow_experiment = mlflow_experiment
-        self.use_mlflow        = use_mlflow
+        self.use_mlflow = use_mlflow
 
         self.train_df, self.val_df, self.test_df, _ = _load_and_split_data(csv_path)
         self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 
-        self.val_loader  = self._build_loader(self.val_df)
+        self.val_loader = self._build_loader(self.val_df)
         self.test_loader = self._build_loader(self.test_df)
 
     def _build_loader(self, df) -> DataLoader:
@@ -136,24 +139,28 @@ class LateFusionTrainer:
             self.images_dir,
             self.train_df["image_name"].tolist(),
         )
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std),
-        ])
+        transform = transforms.Compose(
+            [
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=mean, std=std),
+            ]
+        )
         return DataLoader(
             FusionDataset(df, self.images_dir, self.tokenizer, transform),
             batch_size=self.batch_size,
             shuffle=False,
         )
 
-    def _build_model(self, w_image: float = 0.5, w_text: float = 0.5) -> LateFusionModel:
+    def _build_model(
+        self, w_image: float = 0.5, w_text: float = 0.5
+    ) -> LateFusionModel:
         return LateFusionModel(self.resnet_path, self.bert_path, w_image, w_text)
 
     def _eval_fn(self, params: dict) -> tuple[dict, float]:
-        model    = self._build_model(params["w_image"], params["w_text"])
+        model = self._build_model(params["w_image"], params["w_text"])
         per_task = model.evaluate(self.val_loader, fusion_unpack)
-        avg_acc  = sum(m["acc"] for m in per_task.values()) / len(model.tasks)
+        avg_acc = sum(m["acc"] for m in per_task.values()) / len(model.tasks)
         return per_task, avg_acc
 
     def train(self, hyperparams: list[dict] | None = None) -> tuple[dict, float]:

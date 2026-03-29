@@ -1,3 +1,3 @@
-__all__ = ['ResNetMultiTaskModel']
+__all__ = ["ResNetMultiTaskModel"]
 
 from .model import ResNetMultiTaskModel

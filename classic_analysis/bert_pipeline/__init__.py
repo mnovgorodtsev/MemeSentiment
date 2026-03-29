@@ -1,3 +1,3 @@
-__all__ = ['BertMultiTaskModel']
+__all__ = ["BertMultiTaskModel"]
 
 from .model import BertMultiTaskModel

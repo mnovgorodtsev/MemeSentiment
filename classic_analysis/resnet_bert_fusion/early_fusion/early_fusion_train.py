@@ -1,6 +1,5 @@
 from classic_analysis.resnet_bert_fusion.early_fusion.model import EarlyFusionTrainer
 
-
 if __name__ == "__main__":
     hyperparams = [
         {"batch_size": 16, "epochs": 3, "learning_rate": 2e-5, "lr_finetune": 1e-4},

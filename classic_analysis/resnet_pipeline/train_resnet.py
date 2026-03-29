@@ -1,7 +1,6 @@
 from classic_analysis.base import MultiTaskTrainer
 from classic_analysis.resnet_pipeline.model import ResNetMultiTaskModel
 
-
 if __name__ == "__main__":
     model = ResNetMultiTaskModel()
 
@@ -18,7 +17,7 @@ if __name__ == "__main__":
         images_dir="data/memotion_dataset_7k/images",
         save_path="./models/resnet_multitask_model",
         results_path="./results/resnet/training_results_resnet.csv",
-        use_mlflow=True
+        use_mlflow=True,
     )
 
     best_params, best_val_acc = trainer.train(hyperparams=hyperparams)

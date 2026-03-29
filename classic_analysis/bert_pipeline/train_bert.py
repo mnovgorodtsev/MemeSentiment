@@ -1,7 +1,6 @@
 from classic_analysis.base import MultiTaskTrainer
 from classic_analysis.bert_pipeline.model import BertMultiTaskModel
 
-
 if __name__ == "__main__":
     model = BertMultiTaskModel()
 
@@ -17,7 +16,7 @@ if __name__ == "__main__":
         data_type="text",
         save_path="./models/bert_multitask_model",
         results_path="./results/bert/training_results_bert.csv",
-        use_mlflow=True
+        use_mlflow=True,
     )
 
     best_params, best_val_acc = trainer.train(hyperparams=hyperparams)

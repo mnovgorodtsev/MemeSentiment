@@ -1,34 +1,29 @@
+import logging
 import os
 import pickle
-import logging
+
+import mlflow
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-from PIL import Image
- 
-import mlflow
 import torch
 import torch.nn as nn
+from PIL import Image
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from torch.utils.data import DataLoader
 from torchvision import transforms
+from tqdm import tqdm
 from transformers import AutoTokenizer
-from sklearn.metrics import (
-    accuracy_score,
-    precision_recall_fscore_support
-)
- 
-from classic_analysis.datasets_preparation import (
-    _load_and_split_data,
-    MemotionDataset,
-    ImageMultiTaskDataset,
-)
 
 from classic_analysis.base.helpers import (
-    save_results_csv,
     compute_mean_std,
-    print_task_metrics
+    print_task_metrics,
+    save_results_csv,
 )
-
+from classic_analysis.datasets_preparation import (
+    ImageMultiTaskDataset,
+    MemotionDataset,
+    _load_and_split_data,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -44,15 +39,16 @@ class MultiTaskModel(nn.Module):
     - grid search over arbitrary hyperparameters (grid_search)
     - MLflow logging (opt-out via use_mlflow=False)
     """
+
     DEFAULT_TASKS = ("humour", "sarcasm", "offensive", "motivational")
- 
+
     def __init__(self, tasks: list[str] | None = None) -> None:
         super().__init__()
         self.tasks = list(tasks or self.DEFAULT_TASKS)
- 
+
     def forward(self, *args, **kwargs):
         raise NotImplementedError("Subclasses must implement forward().")
- 
+
     def run_inference(self, loader: DataLoader, unpack_fn) -> tuple[dict, dict]:
         """
         Runs the model on a DataLoader and collects predictions.
@@ -67,7 +63,7 @@ class MultiTaskModel(nn.Module):
         device = next(self.parameters()).device
         y_true = {task: [] for task in self.tasks}
         y_pred = {task: [] for task in self.tasks}
- 
+
         self.eval()
         with torch.no_grad():
             for batch in loader:
@@ -77,9 +73,9 @@ class MultiTaskModel(nn.Module):
                     preds = torch.argmax(outputs[task], dim=1)
                     y_pred[task].extend(preds.cpu().numpy())
                     y_true[task].extend(labels[task].cpu().numpy())
- 
+
         return y_true, y_pred
- 
+
     @staticmethod
     def compute_metrics(y_true: list, y_pred: list) -> dict:
         """Returns a dictionary with accuracy/precision/recall/f1 for a single task."""
@@ -88,7 +84,7 @@ class MultiTaskModel(nn.Module):
             y_true, y_pred, average="weighted", zero_division=0
         )
         return {"acc": acc, "precision": precision, "recall": recall, "f1": f1}
- 
+
     def evaluate(self, loader: DataLoader, unpack_fn) -> dict[str, dict]:
         """
         Runs inference and returns per-task metrics.
@@ -101,12 +97,12 @@ class MultiTaskModel(nn.Module):
             task: self.compute_metrics(y_true[task], y_pred[task])
             for task in self.tasks
         }
- 
+
     def print_evaluation(self, loader: DataLoader, unpack_fn) -> None:
         y_true, y_pred = self.run_inference(loader, unpack_fn)
         for task in self.tasks:
             print_task_metrics(y_true, y_pred, task)
- 
+
     @staticmethod
     def _mlflow_log_run(
         run_name: str,
@@ -121,7 +117,7 @@ class MultiTaskModel(nn.Module):
             for task, m in metrics.items():
                 for metric_name, value in m.items():
                     mlflow.log_metric(f"{task}_{metric_name}", value)
- 
+
     def grid_search(
         self,
         param_grid: list[dict],
@@ -149,38 +145,42 @@ class MultiTaskModel(nn.Module):
         """
         if use_mlflow:
             mlflow.set_experiment(mlflow_experiment)
- 
-        summary      = []
-        best_acc     = -1.0
-        best_params  = None
- 
+
+        summary = []
+        best_acc = -1.0
+        best_params = None
+
         for params in param_grid:
             logger.info(f"Grid search - params: {params}")
             per_task, avg_acc = eval_fn(params)
- 
+
             run_name = run_name_fn(params) if run_name_fn else str(params)
             logger.info(f"avg_accuracy={avg_acc:.4f} | {run_name}")
- 
+
             if use_mlflow:
                 self._mlflow_log_run(run_name, params, per_task, avg_acc)
- 
-            summary.append({
-                **params,
-                "avg_accuracy": avg_acc,
-                **{f"{t}_{k}": v for t, m in per_task.items() for k, v in m.items()},
-            })
- 
+
+            summary.append(
+                {
+                    **params,
+                    "avg_accuracy": avg_acc,
+                    **{
+                        f"{t}_{k}": v for t, m in per_task.items() for k, v in m.items()
+                    },
+                }
+            )
+
             if avg_acc > best_acc:
                 best_acc, best_params = avg_acc, params
- 
+
         logger.info(f"Best params: {best_params} | avg_acc: {best_acc:.4f}")
- 
+
         if results_path:
             save_results_csv(summary, results_path)
- 
+
         return best_params, best_acc
- 
- 
+
+
 class MultiTaskTrainer:
     def __init__(
         self,
@@ -199,126 +199,140 @@ class MultiTaskTrainer:
         mlflow_experiment: str = "MultiTaskTrainer",
         use_mlflow: bool = True,
         test: bool = False,
-        results_path="./results/training_results.csv"
+        results_path="./results/training_results.csv",
     ) -> None:
-        self.device            = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model             = model.to(self.device)
-        self.data_type         = data_type
-        self.save_path         = save_path
-        self.epochs            = epochs
-        self.batch_size        = batch_size
-        self.learning_rate     = learning_rate
-        self.lr_finetune       = lr_finetune
-        self.freeze_epochs     = freeze_epochs
-        self.max_length        = max_length
-        self.num_workers       = num_workers
-        self.images_dir        = images_dir
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model = model.to(self.device)
+        self.data_type = data_type
+        self.save_path = save_path
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.learning_rate = learning_rate
+        self.lr_finetune = lr_finetune
+        self.freeze_epochs = freeze_epochs
+        self.max_length = max_length
+        self.num_workers = num_workers
+        self.images_dir = images_dir
         self.mlflow_experiment = mlflow_experiment
-        self.use_mlflow        = use_mlflow
-        self.results_path      =results_path
- 
-        self.train_df, self.val_df, self.test_df, self.encoders = _load_and_split_data(csv_path)
- 
+        self.use_mlflow = use_mlflow
+        self.results_path = results_path
+
+        self.train_df, self.val_df, self.test_df, self.encoders = _load_and_split_data(
+            csv_path
+        )
+
         if self.data_type == "text":
             self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
             self._tokenize_splits()
- 
+
         self.train_loader, self.val_loader, self.test_loader = self._build_loaders()
-        self.criterion    = nn.CrossEntropyLoss()
+        self.criterion = nn.CrossEntropyLoss()
         self.current_params = self._snapshot_params()
         self._reset_optimizer()
- 
+
         if test:
             self.load_model()
- 
+
     def _tokenize_splits(self) -> None:
         for df in (self.train_df, self.val_df, self.test_df):
             for feature in ("input_ids", "attention_mask"):
-                df[feature] = df["text_corrected"].apply(
-                    lambda x: self.tokenizer(
-                        x,
-                        padding="max_length",
-                        truncation=True,
-                        max_length=self.max_length,
-                    )[feature]
-                ).tolist()
- 
+                df[feature] = (
+                    df["text_corrected"]
+                    .apply(
+                        lambda x: self.tokenizer(
+                            x,
+                            padding="max_length",
+                            truncation=True,
+                            max_length=self.max_length,
+                        )[feature]
+                    )
+                    .tolist()
+                )
+
     def _build_text_datasets(self) -> tuple:
         return (
             MemotionDataset(self.train_df),
             MemotionDataset(self.val_df),
             MemotionDataset(self.test_df),
         )
- 
+
     def _build_image_datasets(self) -> tuple:
         mean, std = compute_mean_std(
             self.images_dir,
             self.train_df["image_name"].tolist(),
         )
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std),
-        ])
+        transform = transforms.Compose(
+            [
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=mean, std=std),
+            ]
+        )
         return (
             ImageMultiTaskDataset(self.train_df, self.images_dir, transform),
-            ImageMultiTaskDataset(self.val_df,   self.images_dir, transform),
-            ImageMultiTaskDataset(self.test_df,  self.images_dir, transform),
+            ImageMultiTaskDataset(self.val_df, self.images_dir, transform),
+            ImageMultiTaskDataset(self.test_df, self.images_dir, transform),
         )
- 
+
     def _build_loaders(self) -> tuple[DataLoader, DataLoader, DataLoader]:
         train_ds, val_ds, test_ds = (
-            self._build_text_datasets() if self.data_type == "text"
+            self._build_text_datasets()
+            if self.data_type == "text"
             else self._build_image_datasets()
         )
         make_loader = lambda ds, shuffle: DataLoader(
-            ds, batch_size=self.batch_size, shuffle=shuffle, num_workers=self.num_workers,
+            ds,
+            batch_size=self.batch_size,
+            shuffle=shuffle,
+            num_workers=self.num_workers,
         )
         return (
             make_loader(train_ds, shuffle=True),
-            make_loader(val_ds,   shuffle=False),
-            make_loader(test_ds,  shuffle=False),
+            make_loader(val_ds, shuffle=False),
+            make_loader(test_ds, shuffle=False),
         )
- 
+
     def _snapshot_params(self) -> dict:
         return {
-            "batch_size":    self.batch_size,
-            "epochs":        self.epochs,
+            "batch_size": self.batch_size,
+            "epochs": self.epochs,
             "learning_rate": self.learning_rate,
-            "lr_finetune":   self.lr_finetune,
+            "lr_finetune": self.lr_finetune,
         }
- 
+
     def _reset_optimizer(self, lr: float | None = None) -> None:
         self.optimizer = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
             lr=lr or self.learning_rate,
         )
- 
+
     def _unpack_batch(self, batch) -> tuple[dict, dict]:
         if self.data_type == "text":
             inputs = {
-                "input_ids":      batch["input_ids"].to(self.device),
+                "input_ids": batch["input_ids"].to(self.device),
                 "attention_mask": batch["attention_mask"].to(self.device),
             }
             labels = {task: batch[task].to(self.device) for task in self.model.tasks}
         else:
             images, labels_dict = batch
             inputs = {"images": images.to(self.device)}
-            labels = {task: labels_dict[task].to(self.device) for task in self.model.tasks}
+            labels = {
+                task: labels_dict[task].to(self.device) for task in self.model.tasks
+            }
         return inputs, labels
- 
+
     def _forward(self, inputs: dict):
         if self.data_type == "text":
             return self.model(inputs["input_ids"], inputs["attention_mask"])
         return self.model(inputs["images"])
- 
+
     def train(self, hyperparams: list[dict] | None = None):
         """
-        Trains the model. If hyperparameters are provided, delegates to grid_search 
+        Trains the model. If hyperparameters are provided, delegates to grid_search
         with MultiTaskModel.
 
         Returns:
-            (best_params, best_val_acc) if hyperparameters are provided, 
+            (best_params, best_val_acc) if hyperparameters are provided,
             otherwise best_val_acc.
         """
         if hyperparams is not None:
@@ -331,30 +345,32 @@ class MultiTaskTrainer:
                 results_path=self.results_path,
             )
         return self._train_single()
- 
+
     def _train_and_eval(self, params: dict) -> tuple[dict, float]:
         """eval_fn passed to grid_search - applies params and trains the model."""
         self._apply_hyperparams(params)
         val_acc, results, per_task = self._train_single_with_results()
         save_results_csv(results)
-        if val_acc == max(r["val_accuracy"] for r in results if r["task"] == self.model.tasks[0]):
+        if val_acc == max(
+            r["val_accuracy"] for r in results if r["task"] == self.model.tasks[0]
+        ):
             self.save_model()
         return per_task, val_acc
- 
+
     def _apply_hyperparams(self, params: dict) -> None:
-        self.batch_size    = params.get("batch_size",    self.batch_size)
-        self.epochs        = params.get("epochs",        self.epochs)
+        self.batch_size = params.get("batch_size", self.batch_size)
+        self.epochs = params.get("epochs", self.epochs)
         self.learning_rate = params.get("learning_rate", self.learning_rate)
-        self.lr_finetune   = params.get("lr_finetune",   self.lr_finetune)
+        self.lr_finetune = params.get("lr_finetune", self.lr_finetune)
         self.current_params = self._snapshot_params()
         self.train_loader, self.val_loader, self.test_loader = self._build_loaders()
         self._reset_optimizer()
- 
+
     def _train_single(self) -> float:
         val_acc, results, _ = self._train_single_with_results()
         save_results_csv(results)
         return val_acc
- 
+
     def _train_single_with_results(self) -> tuple[float, list[dict], dict]:
         """
         Training loop for a single configuration.
@@ -362,30 +378,32 @@ class MultiTaskTrainer:
         Returns:
             (best_val_acc, rows_for_csv, final_per_task_metrics)
         """
-        all_results  = []
+        all_results = []
         best_val_acc = 0.0
-        best_epoch   = 0
+        best_epoch = 0
         last_metrics = {}
- 
+
         for epoch in range(self.epochs):
             self._maybe_unfreeze(epoch)
             avg_train_loss = self._run_train_epoch()
-            val_metrics    = self._run_eval_epoch(self.val_loader)
- 
-            epoch_results, avg_acc = self._log_and_collect(epoch, avg_train_loss, val_metrics)
+            val_metrics = self._run_eval_epoch(self.val_loader)
+
+            epoch_results, avg_acc = self._log_and_collect(
+                epoch, avg_train_loss, val_metrics
+            )
             all_results.extend(epoch_results)
- 
+
             if self.use_mlflow:
                 self._log_epoch_mlflow(epoch, avg_train_loss, val_metrics, avg_acc)
- 
+
             if avg_acc > best_val_acc:
                 best_val_acc = avg_acc
-                best_epoch   = epoch + 1
+                best_epoch = epoch + 1
                 last_metrics = val_metrics
- 
+
         logger.info(f"Best epoch: {best_epoch} | avg val acc: {best_val_acc:.4f}")
         return best_val_acc, all_results, last_metrics
- 
+
     def _log_epoch_mlflow(
         self,
         epoch: int,
@@ -401,13 +419,13 @@ class MultiTaskTrainer:
             for task, m in val_metrics.items():
                 for metric_name, value in m.items():
                     mlflow.log_metric(f"{task}_{metric_name}", value, step=epoch)
- 
+
     def _maybe_unfreeze(self, epoch: int) -> None:
         if self.data_type == "image" and epoch == self.freeze_epochs:
             for param in self.model.base.parameters():
                 param.requires_grad = True
             self._reset_optimizer(lr=self.lr_finetune)
- 
+
     def _run_train_epoch(self) -> float:
         self.model.train()
         total_loss = 0.0
@@ -423,12 +441,12 @@ class MultiTaskTrainer:
             self.optimizer.step()
             total_loss += loss.item()
         return total_loss / len(self.train_loader)
- 
+
     def _run_eval_epoch(self, loader: DataLoader) -> dict[str, dict]:
         self.model.eval()
         y_true = {task: [] for task in self.model.tasks}
         y_pred = {task: [] for task in self.model.tasks}
- 
+
         with torch.no_grad():
             for batch in loader:
                 inputs, labels = self._unpack_batch(batch)
@@ -437,12 +455,12 @@ class MultiTaskTrainer:
                     preds = torch.argmax(outputs[task], dim=1)
                     y_true[task].extend(labels[task].cpu().numpy())
                     y_pred[task].extend(preds.cpu().numpy())
- 
+
         return {
             task: MultiTaskModel.compute_metrics(y_true[task], y_pred[task])
             for task in self.model.tasks
         }
- 
+
     def _log_and_collect(
         self,
         epoch: int,
@@ -457,26 +475,28 @@ class MultiTaskTrainer:
                 f"Recall: {m['recall']:.4f}, F1: {m['f1']:.4f}"
             )
             acc_list.append(m["acc"])
-            rows.append({
-                "epoch":         epoch + 1,
-                "task":          task,
-                "train_loss":    train_loss,
-                "val_accuracy":  m["acc"],
-                "val_precision": m["precision"],
-                "val_recall":    m["recall"],
-                "val_f1":        m["f1"],
-                **self.current_params,
-            })
+            rows.append(
+                {
+                    "epoch": epoch + 1,
+                    "task": task,
+                    "train_loss": train_loss,
+                    "val_accuracy": m["acc"],
+                    "val_precision": m["precision"],
+                    "val_recall": m["recall"],
+                    "val_f1": m["f1"],
+                    **self.current_params,
+                }
+            )
         return rows, sum(acc_list) / len(acc_list)
- 
+
     def test(self) -> None:
         self.model.print_evaluation(self.test_loader, self._unpack_batch_for_model)
- 
+
     def _unpack_batch_for_model(self, batch, device) -> tuple[dict, dict]:
         """Adapter unpack_fn compatible with MultiTaskModel.run_inference."""
         inputs, labels = self._unpack_batch(batch)
         return inputs, labels
- 
+
     def save_model(self) -> None:
         os.makedirs(self.save_path, exist_ok=True)
         torch.save(
@@ -488,10 +508,13 @@ class MultiTaskTrainer:
             with open(os.path.join(self.save_path, "label_encoders.pkl"), "wb") as f:
                 pickle.dump(self.encoders, f)
         logger.info(f"Model saved to {self.save_path}")
- 
+
     def load_model(self) -> None:
         self.model.load_state_dict(
-            torch.load(os.path.join(self.save_path, "model_weights.pt"), map_location=self.device)
+            torch.load(
+                os.path.join(self.save_path, "model_weights.pt"),
+                map_location=self.device,
+            )
         )
         if self.data_type == "text":
             with open(os.path.join(self.save_path, "label_encoders.pkl"), "rb") as f:

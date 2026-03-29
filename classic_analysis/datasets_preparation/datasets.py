@@ -1,10 +1,12 @@
 import os
-import torch
-from torch.utils.data import Dataset
-from PIL import Image, ImageFile
+
 import pandas as pd
+import torch
+from PIL import Image, ImageFile
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+from torch.utils.data import Dataset
+
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
@@ -14,7 +16,7 @@ def _load_and_split_data(csv_path, val_size=0.1, test_size=0.1, random_state=42)
     df = df.dropna(subset=["text_corrected"])
     df["text_corrected"] = df["text_corrected"].astype(str)
 
-    df = _binarize_labels(df) 
+    df = _binarize_labels(df)
 
     tasks = ["humour", "sarcasm", "offensive", "motivational"]
 
@@ -25,46 +27,54 @@ def _load_and_split_data(csv_path, val_size=0.1, test_size=0.1, random_state=42)
         encoders[task] = enc
 
     train_val_df, test_df = train_test_split(
-        df,
-        test_size=test_size,
-        random_state=random_state,
-        stratify=df["humour"]
+        df, test_size=test_size, random_state=random_state, stratify=df["humour"]
     )
 
     train_df, val_df = train_test_split(
         train_val_df,
         test_size=val_size / (1 - test_size),
         random_state=random_state,
-        stratify=train_val_df["humour"]
+        stratify=train_val_df["humour"],
     )
 
-    return train_df.reset_index(drop=True), val_df.reset_index(drop=True), test_df.reset_index(drop=True), encoders
+    return (
+        train_df.reset_index(drop=True),
+        val_df.reset_index(drop=True),
+        test_df.reset_index(drop=True),
+        encoders,
+    )
 
 
 def _binarize_labels(df):
     # humour
-    df["humour"] = df["humour"].replace({
-        "funny": "funny",
-        "hilarious": "funny",
-        "very_funny": "funny",
-        "not_funny": "not_funny"
-    })
+    df["humour"] = df["humour"].replace(
+        {
+            "funny": "funny",
+            "hilarious": "funny",
+            "very_funny": "funny",
+            "not_funny": "not_funny",
+        }
+    )
 
     # sarcasm
-    df["sarcasm"] = df["sarcasm"].replace({
-        "general": "not_sarcastic",
-        "not_sarcastic": "not_sarcastic",
-        "twisted_meaning": "sarcastic",
-        "very_twisted": "sarcastic"
-    })
+    df["sarcasm"] = df["sarcasm"].replace(
+        {
+            "general": "not_sarcastic",
+            "not_sarcastic": "not_sarcastic",
+            "twisted_meaning": "sarcastic",
+            "very_twisted": "sarcastic",
+        }
+    )
 
     # offensive
-    df["offensive"] = df["offensive"].replace({
-        "not_offensive": "not_offensive",
-        "slight": "offensive",
-        "very_offensive": "offensive",
-        "hateful_offensive": "offensive"
-    })
+    df["offensive"] = df["offensive"].replace(
+        {
+            "not_offensive": "not_offensive",
+            "slight": "offensive",
+            "very_offensive": "offensive",
+            "hateful_offensive": "offensive",
+        }
+    )
 
     return df
 
@@ -84,11 +94,10 @@ class MemotionDataset(torch.utils.data.Dataset):
         return {
             "input_ids": torch.tensor(row["input_ids"], dtype=torch.long),
             "attention_mask": torch.tensor(row["attention_mask"], dtype=torch.long),
-
             "humour": torch.tensor(row["humour"], dtype=torch.long),
             "sarcasm": torch.tensor(row["sarcasm"], dtype=torch.long),
             "offensive": torch.tensor(row["offensive"], dtype=torch.long),
-            "motivational": torch.tensor(row["motivational"], dtype=torch.long)
+            "motivational": torch.tensor(row["motivational"], dtype=torch.long),
         }
 
 
@@ -118,7 +127,7 @@ class ImageMultiTaskDataset(Dataset):
             "humour": int(row["humour"]),
             "sarcasm": int(row["sarcasm"]),
             "offensive": int(row["offensive"]),
-            "motivational": int(row["motivational"])
+            "motivational": int(row["motivational"]),
         }
 
         return image, labels
@@ -150,19 +159,19 @@ class FusionDataset(Dataset):
             padding="max_length",
             truncation=True,
             max_length=self.max_length,
-            return_tensors="pt"
+            return_tensors="pt",
         )
 
         labels = {
             "humour": int(row["humour"]),
             "sarcasm": int(row["sarcasm"]),
             "offensive": int(row["offensive"]),
-            "motivational": int(row["motivational"])
+            "motivational": int(row["motivational"]),
         }
 
         return {
             "image": image,
             "input_ids": encoding["input_ids"].squeeze(0),
             "attention_mask": encoding["attention_mask"].squeeze(0),
-            "labels": labels
+            "labels": labels,
         }
