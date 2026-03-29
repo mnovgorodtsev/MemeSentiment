@@ -7,32 +7,38 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-def _load_and_split_data(csv_path):
 
+def _load_and_split_data(csv_path, val_size=0.1, test_size=0.1, random_state=42):
     df = pd.read_csv(csv_path)
 
     df = df.dropna(subset=["text_corrected"])
     df["text_corrected"] = df["text_corrected"].astype(str)
 
-    df = _binarize_labels(df)
+    df = _binarize_labels(df) 
 
     tasks = ["humour", "sarcasm", "offensive", "motivational"]
 
     encoders = {}
-
     for task in tasks:
         enc = LabelEncoder()
         df[task] = enc.fit_transform(df[task].astype(str))
         encoders[task] = enc
 
-    train_df, test_df = train_test_split(
+    train_val_df, test_df = train_test_split(
         df,
-        test_size=0.1,
-        random_state=42,
+        test_size=test_size,
+        random_state=random_state,
         stratify=df["humour"]
     )
 
-    return train_df.reset_index(drop=True), test_df.reset_index(drop=True), encoders
+    train_df, val_df = train_test_split(
+        train_val_df,
+        test_size=val_size / (1 - test_size),
+        random_state=random_state,
+        stratify=train_val_df["humour"]
+    )
+
+    return train_df.reset_index(drop=True), val_df.reset_index(drop=True), test_df.reset_index(drop=True), encoders
 
 
 def _binarize_labels(df):
