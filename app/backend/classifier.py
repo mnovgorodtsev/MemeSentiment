@@ -1,5 +1,5 @@
 import ollama
-from .config import load_config
+from utils.read_config import load_config
 
 cfg = load_config()
 
@@ -10,7 +10,7 @@ PROMPTS = [
     "Classify if this meme is funny or not funny. Return only class: funny or not funny",
     "Classify if this meme is general, twisted or not sarcastic. Return only class: general, twisted or not sarcastic",
     "Classify if this meme is offensive or not offensive. Return only class: offensive or not offensive",
-    "Classify if this meme is motivational or not motivational. Return only class: motivational or not motivational"
+    "Classify if this meme is motivational or not motivational. Return only class: motivational or not motivational",
 ]
 
 
@@ -20,11 +20,7 @@ def classify_meme(image_path: str):
     for prompt in PROMPTS:
         response = client.chat(
             model=MODEL_NAME,
-            messages=[{
-                "role": "user",
-                "content": prompt,
-                "images": [image_path]
-            }]
+            messages=[{"role": "user", "content": prompt, "images": [image_path]}],
         )
 
         results.append(response["message"]["content"].strip())

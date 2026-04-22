@@ -23,7 +23,7 @@ services:
   app:
     build:
       context: ../..
-      dockerfile: deploy/vllm/Dockerfile
+      dockerfile: deploy/app/Dockerfile
     depends_on:
       - ollama
     environment:

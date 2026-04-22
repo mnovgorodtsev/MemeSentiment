@@ -1,112 +1,38 @@
 import os
 
-import pandas as pd
 import torch
 from PIL import Image, ImageFile
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import Dataset
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
-def _load_and_split_data(csv_path, val_size=0.1, test_size=0.1, random_state=42):
-    df = pd.read_csv(csv_path)
-
-    df = df.dropna(subset=["text_corrected"])
-    df["text_corrected"] = df["text_corrected"].astype(str)
-
-    df = _binarize_labels(df)
-
-    tasks = ["humour", "sarcasm", "offensive", "motivational"]
-
-    encoders = {}
-    for task in tasks:
-        enc = LabelEncoder()
-        df[task] = enc.fit_transform(df[task].astype(str))
-        encoders[task] = enc
-
-    train_val_df, test_df = train_test_split(
-        df, test_size=test_size, random_state=random_state, stratify=df["humour"]
-    )
-
-    train_df, val_df = train_test_split(
-        train_val_df,
-        test_size=val_size / (1 - test_size),
-        random_state=random_state,
-        stratify=train_val_df["humour"],
-    )
-
-    return (
-        train_df.reset_index(drop=True),
-        val_df.reset_index(drop=True),
-        test_df.reset_index(drop=True),
-        encoders,
-    )
-
-
-def _binarize_labels(df):
-    # humour
-    df["humour"] = df["humour"].replace(
-        {
-            "funny": "funny",
-            "hilarious": "funny",
-            "very_funny": "funny",
-            "not_funny": "not_funny",
-        }
-    )
-
-    # sarcasm
-    df["sarcasm"] = df["sarcasm"].replace(
-        {
-            "general": "not_sarcastic",
-            "not_sarcastic": "not_sarcastic",
-            "twisted_meaning": "sarcastic",
-            "very_twisted": "sarcastic",
-        }
-    )
-
-    # offensive
-    df["offensive"] = df["offensive"].replace(
-        {
-            "not_offensive": "not_offensive",
-            "slight": "offensive",
-            "very_offensive": "offensive",
-            "hateful_offensive": "offensive",
-        }
-    )
-
-    return df
-
-
-class MemotionDataset(torch.utils.data.Dataset):
-
-    def __init__(self, df):
+class TextMultiTaskDataset(torch.utils.data.Dataset):
+    def __init__(self, df, tasks=None):
         self.df = df
+        self.tasks = tasks or ["humour", "sarcasm", "offensive", "motivational"]
 
     def __len__(self):
         return len(self.df)
 
     def __getitem__(self, idx):
-
         row = self.df.iloc[idx]
-
-        return {
+        inputs = {
             "input_ids": torch.tensor(row["input_ids"], dtype=torch.long),
             "attention_mask": torch.tensor(row["attention_mask"], dtype=torch.long),
-            "humour": torch.tensor(row["humour"], dtype=torch.long),
-            "sarcasm": torch.tensor(row["sarcasm"], dtype=torch.long),
-            "offensive": torch.tensor(row["offensive"], dtype=torch.long),
-            "motivational": torch.tensor(row["motivational"], dtype=torch.long),
         }
+        labels = {
+            task: torch.tensor(row[task], dtype=torch.long) for task in self.tasks
+        }
+        return {**inputs, **labels}
 
 
 class ImageMultiTaskDataset(Dataset):
-    def __init__(self, df, images_dir, transform=None):
+    def __init__(self, df, images_dir, transform=None, tasks=None):
         self.df = df
         self.images_dir = images_dir
         self.transform = transform
-        self.tasks = ["humour", "sarcasm", "offensive", "motivational"]
+        self.tasks = tasks or ["humour", "sarcasm", "offensive", "motivational"]
 
     def __len__(self):
         return len(self.df)
@@ -123,12 +49,7 @@ class ImageMultiTaskDataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        labels = {
-            "humour": int(row["humour"]),
-            "sarcasm": int(row["sarcasm"]),
-            "offensive": int(row["offensive"]),
-            "motivational": int(row["motivational"]),
-        }
+        labels = {task: int(row[task]) for task in self.tasks}
 
         return image, labels
 

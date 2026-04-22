@@ -13,6 +13,8 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
 from transformers import AutoTokenizer
+import random
+from sklearn.utils.class_weight import compute_class_weight
 
 from classic_analysis.base.helpers import (
     compute_mean_std,
@@ -21,9 +23,19 @@ from classic_analysis.base.helpers import (
 )
 from classic_analysis.datasets_preparation import (
     ImageMultiTaskDataset,
-    MemotionDataset,
-    _load_and_split_data,
+    TextMultiTaskDataset,
 )
+
+from utils.split_dataset import _load_and_split_data
+
+SEED = 42
+
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed_all(SEED)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -216,6 +228,13 @@ class MultiTaskTrainer:
         self.mlflow_experiment = mlflow_experiment
         self.use_mlflow = use_mlflow
         self.results_path = results_path
+        self.best_val_acc = -1
+
+        self.model_class = model.__class__
+        self.model_init_kwargs = self._extract_model_init_params(model)
+
+        self.model = model.to(self.device)
+        self.data_type = data_type
 
         self.train_df, self.val_df, self.test_df, self.encoders = _load_and_split_data(
             csv_path
@@ -226,12 +245,61 @@ class MultiTaskTrainer:
             self._tokenize_splits()
 
         self.train_loader, self.val_loader, self.test_loader = self._build_loaders()
+        self.class_weights = self._build_class_weights()
         self.criterion = nn.CrossEntropyLoss()
         self.current_params = self._snapshot_params()
         self._reset_optimizer()
 
         if test:
             self.load_model()
+
+    def _build_class_weights(self):
+        weights = {}
+        for task in self.model.tasks:
+            class_weights = compute_class_weight(
+                "balanced",
+                classes=np.unique(self.train_df[task]),
+                y=self.train_df[task],
+            )
+            weights[task] = torch.tensor(
+                class_weights, dtype=torch.float32, device=self.device
+            )
+        return weights
+
+    def _extract_model_init_params(self, model: MultiTaskModel) -> dict:
+        BERT_PARAMS = {
+            "BertLinear": {"model_name": "bert-base-uncased", "dropout": 0.1},
+            "BertMLP": {
+                "model_name": "bert-base-uncased",
+                "hidden_dim": 256,
+                "dropout": 0.2,
+            },
+            "BertDeepMLP": {
+                "model_name": "bert-base-uncased",
+                "hidden_dim": 256,
+                "dropout": 0.3,
+            },
+        }
+        RESNET_PARAMS = {
+            "ResNetLinear": {"dropout": 0.1},
+            "ResNetAttention": {"dropout": 0.2},
+            "ResNetAdaptivePooling": {"dropout": 0.2, "hidden_dim": 256},
+        }
+        class_name = model.__class__.__name__
+        if class_name in BERT_PARAMS:
+            params = BERT_PARAMS[class_name].copy()
+        elif class_name in RESNET_PARAMS:
+            params = RESNET_PARAMS[class_name].copy()
+        else:
+            params = {}
+        params["tasks"] = model.tasks
+        return params
+
+    def _reinit_model(self) -> None:
+        logger.info(f"Reinitializing model: {self.model_class.__name__}")
+        self.model = self.model_class(**self.model_init_kwargs)
+        self.model.to(self.device)
+        self._reset_optimizer()
 
     def _tokenize_splits(self) -> None:
         for df in (self.train_df, self.val_df, self.test_df):
@@ -251,9 +319,9 @@ class MultiTaskTrainer:
 
     def _build_text_datasets(self) -> tuple:
         return (
-            MemotionDataset(self.train_df),
-            MemotionDataset(self.val_df),
-            MemotionDataset(self.test_df),
+            TextMultiTaskDataset(self.train_df),
+            TextMultiTaskDataset(self.val_df),
+            TextMultiTaskDataset(self.test_df),
         )
 
     def _build_image_datasets(self) -> tuple:
@@ -280,11 +348,16 @@ class MultiTaskTrainer:
             if self.data_type == "text"
             else self._build_image_datasets()
         )
+
+        g = torch.Generator()
+        g.manual_seed(SEED)
+
         make_loader = lambda ds, shuffle: DataLoader(
             ds,
             batch_size=self.batch_size,
             shuffle=shuffle,
             num_workers=self.num_workers,
+            generator=g,
         )
         return (
             make_loader(train_ds, shuffle=True),
@@ -304,6 +377,7 @@ class MultiTaskTrainer:
         self.optimizer = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
             lr=lr or self.learning_rate,
+            weight_decay=1e-4,
         )
 
     def _unpack_batch(self, batch) -> tuple[dict, dict]:
@@ -347,13 +421,11 @@ class MultiTaskTrainer:
         return self._train_single()
 
     def _train_and_eval(self, params: dict) -> tuple[dict, float]:
-        """eval_fn passed to grid_search - applies params and trains the model."""
         self._apply_hyperparams(params)
+        self._reinit_model()
         val_acc, results, per_task = self._train_single_with_results()
-        save_results_csv(results)
-        if val_acc == max(
-            r["val_accuracy"] for r in results if r["task"] == self.model.tasks[0]
-        ):
+        if val_acc > self.best_val_acc:
+            self.best_val_acc = val_acc
             self.save_model()
         return per_task, val_acc
 
@@ -364,11 +436,10 @@ class MultiTaskTrainer:
         self.lr_finetune = params.get("lr_finetune", self.lr_finetune)
         self.current_params = self._snapshot_params()
         self.train_loader, self.val_loader, self.test_loader = self._build_loaders()
-        self._reset_optimizer()
 
     def _train_single(self) -> float:
         val_acc, results, _ = self._train_single_with_results()
-        save_results_csv(results)
+        save_results_csv(results, self.results_path)
         return val_acc
 
     def _train_single_with_results(self) -> tuple[float, list[dict], dict]:
@@ -382,6 +453,7 @@ class MultiTaskTrainer:
         best_val_acc = 0.0
         best_epoch = 0
         last_metrics = {}
+        epoch_accs = []
 
         for epoch in range(self.epochs):
             self._maybe_unfreeze(epoch)
@@ -392,6 +464,8 @@ class MultiTaskTrainer:
                 epoch, avg_train_loss, val_metrics
             )
             all_results.extend(epoch_results)
+            epoch_accs.append(avg_acc)
+            last_metrics = val_metrics
 
             if self.use_mlflow:
                 self._log_epoch_mlflow(epoch, avg_train_loss, val_metrics, avg_acc)
@@ -399,10 +473,13 @@ class MultiTaskTrainer:
             if avg_acc > best_val_acc:
                 best_val_acc = avg_acc
                 best_epoch = epoch + 1
-                last_metrics = val_metrics
 
-        logger.info(f"Best epoch: {best_epoch} | avg val acc: {best_val_acc:.4f}")
-        return best_val_acc, all_results, last_metrics
+        avg_acc_all_epochs = sum(epoch_accs) / len(epoch_accs)
+
+        logger.info(f"Best epoch: {best_epoch} | best val acc: {best_val_acc:.4f}")
+        logger.info(f"Average accuracy across all epochs: {avg_acc_all_epochs:.4f}")
+
+        return avg_acc_all_epochs, all_results, last_metrics
 
     def _log_epoch_mlflow(
         self,
@@ -432,10 +509,13 @@ class MultiTaskTrainer:
         for batch in self.train_loader:
             inputs, labels = self._unpack_batch(batch)
             outputs = self._forward(inputs)
-            loss = sum(
-                nn.CrossEntropyLoss()(outputs[task], labels[task])
-                for task in self.model.tasks
-            )
+            loss = 0
+            for task in self.model.tasks:
+                task_loss = nn.functional.cross_entropy(
+                    outputs[task], labels[task], weight=self.class_weights[task]
+                )
+                loss += task_loss
+
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()

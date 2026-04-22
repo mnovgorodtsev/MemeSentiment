@@ -14,13 +14,6 @@ with gr.Blocks() as demo:
 
     btn = gr.Button("Classify")
 
-    btn.click(
-        fn=classify_meme,
-        inputs=image_input,
-        outputs=output
-    )
+    btn.click(fn=classify_meme, inputs=image_input, outputs=output)
 
-demo.launch(
-    server_name=cfg["server_host"],
-    server_port=cfg["server_port"]
-)
+demo.launch(server_name=cfg["server_host"], server_port=cfg["server_port"])

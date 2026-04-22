@@ -1,3 +1,3 @@
-__all__ = ["ResNetMultiTaskModel"]
+__all__ = ["ResNetLinear", "ResNetAttention", "ResNetAdaptivePooling"]
 
-from .model import ResNetMultiTaskModel
+from .model import ResNetLinear, ResNetAttention, ResNetAdaptivePooling

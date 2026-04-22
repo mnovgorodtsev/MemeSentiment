@@ -1,3 +1,3 @@
-__all__ = ["BertMultiTaskModel"]
+__all__ = ["BertLinear", "BertMLP", "BertDeepMLP"]
 
-from .model import BertMultiTaskModel
+from .model import BertLinear, BertMLP, BertDeepMLP

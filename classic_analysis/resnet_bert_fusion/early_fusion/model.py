@@ -11,7 +11,8 @@ from transformers import AutoModel, AutoTokenizer
 
 from classic_analysis.base import MultiTaskModel, print_task_metrics
 from classic_analysis.base.helpers import compute_mean_std, save_results_csv
-from classic_analysis.datasets_preparation import FusionDataset, _load_and_split_data
+from classic_analysis.datasets_preparation import FusionDataset
+from utils.split_dataset import _load_and_split_data
 
 
 def early_fusion_unpack(batch: dict, device: str) -> tuple[dict, dict]:
