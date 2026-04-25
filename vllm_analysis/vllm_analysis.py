@@ -5,12 +5,14 @@ from typing import Dict
 
 from config import Config
 from vllm_analysis.classifier import MemeClassifier
+from vllm_analysis.prompts import TASKS
 from vllm_analysis.helpers import (
     calculate_metrics,
     generate_report,
     save_report,
     save_detailed_results,
 )
+import vllm_analysis.prompts as prompt_module
 from utils.split_dataset import _load_and_split_data
 
 logging.basicConfig(
@@ -64,13 +66,13 @@ def test_model_on_dataset(
         "duration_seconds": end_time - start_time,
     }
 
-    from prompts import TASKS
-
-    for task in TASKS:
+    tasks = prompt_module.get_tasks()
+    
+    for task in tasks:
         y_true = np.array(batch_results[task]["true_labels"])
         y_pred = np.array(batch_results[task]["predictions"])
         metrics = calculate_metrics(y_true, y_pred)
-
+        
         results["tasks"][task] = {
             "predictions": batch_results[task]["predictions"],
             "true_labels": batch_results[task]["true_labels"],
@@ -78,14 +80,14 @@ def test_model_on_dataset(
             "sample_ids": batch_results[task]["sample_ids"],
             "metrics": metrics,
         }
-
+        
         logger.info(
             f"{task.upper()}: "
             f"Accuracy={metrics['accuracy']:.4f}, "
             f"F1={metrics['f1']:.4f}, "
             f"Valid={metrics['valid_predictions']}/{metrics['total_predictions']}"
         )
-
+    
     return results
 
 
