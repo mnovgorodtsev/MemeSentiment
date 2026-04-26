@@ -13,7 +13,7 @@ from classic_analysis.base.helpers import compute_mean_std
 from classic_analysis.datasets_preparation import FusionDataset
 from utils.split_dataset import _load_and_split_data
 from classic_analysis.bert_pipeline.model import BertDeepMLP
-from classic_analysis.resnet_pipeline.model import ResNetLinear
+from classic_analysis.resnet_pipeline.model import ResNetAttention
 
 
 def fusion_unpack(batch: dict, device: str) -> tuple[dict, dict]:
@@ -77,7 +77,7 @@ class LateFusionTrainer:
         resnet_path: str,
         bert_path: str,
         batch_size: int = 32,
-        save_path: str = "./models/late_fusion_model/weights.json",
+        save_path: str = "./models/late_fusion_model/weights2222.json",
         results_path: str = "./results/late_fusion/grid_search_summary.csv",
         mlflow_experiment: str = "LateFusion_GridSearch",
         use_mlflow: bool = True,
@@ -93,7 +93,7 @@ class LateFusionTrainer:
         self.train_df, self.val_df, self.test_df, _ = _load_and_split_data(csv_path)
         self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 
-        self.image_model = ResNetLinear()
+        self.image_model = ResNetAttention()
         self.text_model = BertDeepMLP()
 
         self.image_model.load_state_dict(
