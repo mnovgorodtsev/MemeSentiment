@@ -1,7 +1,7 @@
 import json
 import logging
 from typing import Dict, List
-import prompts as prompt_module
+from vllm_analysis.prompts import get_tasks
 import numpy as np
 
 from sklearn.metrics import (
@@ -111,7 +111,7 @@ def generate_report(all_results: List[Dict]) -> str:
     report.append("SUMMARY - CROSS-MODEL COMPARISON")
     report.append("=" * 100)
 
-    tasks = prompt_module.get_tasks()
+    tasks = get_tasks()
 
     for task in tasks:
         report.append(f"\n{task.upper()}:")

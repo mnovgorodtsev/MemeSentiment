@@ -1,9 +1,10 @@
-from classic_analysis.base import MultiTaskTrainer
+from classic_analysis.base import initialize_model
 from classic_analysis.resnet_pipeline.model import (
     ResNetAdaptivePooling,
     ResNetAttention,
     ResNetLinear,
 )
+
 
 if __name__ == "__main__":
 
@@ -11,13 +12,7 @@ if __name__ == "__main__":
         [ResNetAttention, ResNetAdaptivePooling, ResNetLinear],
         ["_attention", "_pooling", "_linear"],
     ):
-        trainer = MultiTaskTrainer(
-            model=model(),
-            csv_path="data/memotion_dataset_7k/labels.csv",
-            data_type="image",
-            images_dir="data/memotion_dataset_7k/images",
-            save_path=f"./models/resnet_multitask_model{prefix}",
-            test=True,
-        )
-
+        trainer = initialize_model(model=model(), 
+                                   test=True,
+                                   data_type="image")
         trainer.test()

@@ -1,4 +1,6 @@
 import logging
+import warnings
+
 import os
 import pickle
 
@@ -27,6 +29,7 @@ from classic_analysis.datasets_preparation import (
 )
 
 from utils.split_dataset import _load_and_split_data
+import os
 
 SEED = 42
 
@@ -39,6 +42,12 @@ torch.backends.cudnn.benchmark = False
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 logger = logging.getLogger(__name__)
+
+warnings.filterwarnings("ignore", category=UserWarning, module="PIL")
+pil_logger = logging.getLogger("PIL")
+pil_logger.setLevel(logging.ERROR)
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 class MultiTaskModel(nn.Module):
@@ -214,7 +223,6 @@ class MultiTaskTrainer:
         results_path="./results/training_results.csv",
     ) -> None:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model = model.to(self.device)
         self.data_type = data_type
         self.save_path = save_path
         self.epochs = epochs
@@ -243,6 +251,9 @@ class MultiTaskTrainer:
         if self.data_type == "text":
             self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
             self._tokenize_splits()
+
+        self._generator = torch.Generator()
+        self._generator.manual_seed(SEED)
 
         self.train_loader, self.val_loader, self.test_loader = self._build_loaders()
         self.class_weights = self._build_class_weights()
@@ -349,15 +360,12 @@ class MultiTaskTrainer:
             else self._build_image_datasets()
         )
 
-        g = torch.Generator()
-        g.manual_seed(SEED)
-
         make_loader = lambda ds, shuffle: DataLoader(
             ds,
             batch_size=self.batch_size,
             shuffle=shuffle,
             num_workers=self.num_workers,
-            generator=g,
+            generator=self._generator,
         )
         return (
             make_loader(train_ds, shuffle=True),
@@ -426,7 +434,6 @@ class MultiTaskTrainer:
         val_acc, results, per_task = self._train_single_with_results()
         if val_acc > self.best_val_acc:
             self.best_val_acc = val_acc
-            self.save_model()
         return per_task, val_acc
 
     def _apply_hyperparams(self, params: dict) -> None:
@@ -442,44 +449,54 @@ class MultiTaskTrainer:
         save_results_csv(results, self.results_path)
         return val_acc
 
-    def _train_single_with_results(self) -> tuple[float, list[dict], dict]:
-        """
-        Training loop for a single configuration.
-
-        Returns:
-            (best_val_acc, rows_for_csv, final_per_task_metrics)
-        """
+    def _train_single_with_results(self, patience: int = 2) -> tuple[float, list[dict], dict]:
         all_results = []
         best_val_acc = 0.0
         best_epoch = 0
-        last_metrics = {}
+        best_epoch_metrics = {}
         epoch_accs = []
-
+        patience_counter = 0
+    
         for epoch in range(self.epochs):
             self._maybe_unfreeze(epoch)
             avg_train_loss = self._run_train_epoch()
             val_metrics = self._run_eval_epoch(self.val_loader)
-
+    
             epoch_results, avg_acc = self._log_and_collect(
                 epoch, avg_train_loss, val_metrics
             )
             all_results.extend(epoch_results)
             epoch_accs.append(avg_acc)
-            last_metrics = val_metrics
-
+    
             if self.use_mlflow:
                 self._log_epoch_mlflow(epoch, avg_train_loss, val_metrics, avg_acc)
-
+    
             if avg_acc > best_val_acc:
                 best_val_acc = avg_acc
                 best_epoch = epoch + 1
-
-        avg_acc_all_epochs = sum(epoch_accs) / len(epoch_accs)
-
+                best_epoch_metrics = val_metrics 
+                patience_counter = 0  
+                
+                self.save_model()
+                logger.info(f"Model improved. Saving checkpoint at epoch {best_epoch}")
+            else:
+                patience_counter += 1
+                logger.info(f"No improvement. Patience: {patience_counter}/{patience}")
+                
+                if patience_counter >= patience:
+                    logger.info(
+                        f"Early stopping triggered at epoch {epoch + 1}. "
+                        f"Best epoch was {best_epoch} with acc: {best_val_acc:.4f}"
+                    )
+                    break
+    
+        avg_acc_all_epochs = sum(epoch_accs) / len(epoch_accs) if epoch_accs else 0.0
+    
         logger.info(f"Best epoch: {best_epoch} | best val acc: {best_val_acc:.4f}")
         logger.info(f"Average accuracy across all epochs: {avg_acc_all_epochs:.4f}")
-
-        return avg_acc_all_epochs, all_results, last_metrics
+        logger.info(f"Total epochs trained: {len(epoch_accs)}")
+    
+        return best_val_acc, all_results, best_epoch_metrics
 
     def _log_epoch_mlflow(
         self,
@@ -602,3 +619,23 @@ class MultiTaskTrainer:
             self.tokenizer = AutoTokenizer.from_pretrained(self.save_path)
         self.model.eval()
         logger.info(f"Model loaded from {self.save_path}")
+
+
+def initialize_model(model, 
+                     csv_path: str = "data/memotion_dataset_7k/labels.csv",
+                     save_path: str = "./models/bert_multitask", 
+                     results_path: str = "./results/bert/training_results.csv",
+                     images_dir: str = "data/memotion_dataset_7k/images",
+                     data_type: str = "text",
+                     test: bool = False):
+    trainer = MultiTaskTrainer(
+        model=model,
+        csv_path=csv_path,
+        data_type=data_type,
+        save_path=save_path,
+        results_path=results_path,
+        images_dir=images_dir,
+        use_mlflow=False,
+        test=test
+    )
+    return trainer

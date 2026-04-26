@@ -1,15 +1,13 @@
 from pathlib import Path
 import configparser
 import json
-import configparser
 import logging
-from pathlib import Path
 from typing import Dict
 
 logger = logging.getLogger(__name__)
 
 
-def load_hyperparams(path: str):
+def load_hyperparams(path: str) -> Dict:
     base_dir = Path(__file__).resolve().parent.parent
     config_path = base_dir / "config" / path
 
@@ -37,6 +35,8 @@ class Config:
 
         if not self.parser.read(self.config_path):
             raise FileNotFoundError(f"Config file not found: {self.config_path}")
+
+        self._prompts_config = load_hyperparams("prompts.json")
 
         logger.info(f"Configuration loaded from {self.config_path}")
         self._initialized = True
@@ -69,11 +69,15 @@ class Config:
 
     @property
     def memotion_dataset_path(self) -> str:
-        return self.parser.getint("datasets", "MEMOTION_DATASET_PATH", fallback="path")
+        return self.parser.get("datasets", "MEMOTION_DATASET_PATH", fallback="path")
 
     @property
     def images_base_path(self) -> str:
-        return self.parser.getint("datasets", "IMAGES_BASE_PATH", fallback="path")
+        return self.parser.get("datasets", "IMAGES_BASE_PATH", fallback="path")
+
+    @property
+    def prompts_config(self) -> Dict:
+        return self._prompts_config
 
     @property
     def classification_config(self) -> Dict:

@@ -50,7 +50,7 @@ class BertMLP(MultiTaskModel):
 
 class BertDeepMLP(MultiTaskModel):
     def __init__(
-        self, model_name="bert-base-uncased", tasks=None, dropout=0.2, hidden_dim=512
+        self, model_name="bert-base-uncased", tasks=None, dropout=0.2, hidden_dim=256
     ):
         super().__init__(tasks)
         self.encoder = AutoModel.from_pretrained(model_name)

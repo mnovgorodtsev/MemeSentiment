@@ -4,7 +4,7 @@ from typing import Dict
 import pandas as pd
 import ollama
 
-import prompts as prompt_module
+from vllm_analysis.prompts import get_tasks, get_prompt_for_task, get_few_shot_examples, parse_classification_response
 from utils.read_config import Config
 
 logger = logging.getLogger(__name__)
@@ -36,16 +36,16 @@ class MemeClassifier:
         train_df: pd.DataFrame = None,
         use_few_shot: bool = False,
     ) -> Dict[str, str]:
-        tasks = prompt_module.get_tasks()
+        tasks = get_tasks()
         results = {}
         meme_text = str(row.get("text_corrected", "")).strip()
 
         for task in tasks:
             try:
-                prompt = prompt_module.get_prompt_for_task(task, meme_text)
+                prompt = get_prompt_for_task(task, meme_text)
 
                 if use_few_shot and train_df is not None:
-                    few_shot_context = prompt_module.get_few_shot_examples(
+                    few_shot_context = get_few_shot_examples(
                         train_df, task, n_shots=2
                     )
                     prompt = f"{few_shot_context}\n\n{prompt}"
@@ -76,7 +76,7 @@ class MemeClassifier:
         train_df: pd.DataFrame = None,
         use_few_shot: bool = False,
     ) -> Dict[str, list]:
-        tasks = prompt_module.get_tasks()
+        tasks = get_tasks()
 
         batch_results = {
             task: {
@@ -104,7 +104,7 @@ class MemeClassifier:
 
             for task in tasks:
                 raw_response = responses.get(task, "error")
-                prediction = prompt_module.parse_classification_response(
+                prediction = parse_classification_response(
                     raw_response, task
                 )
 

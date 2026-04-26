@@ -1,22 +1,22 @@
-from classic_analysis.base import MultiTaskTrainer
+from classic_analysis.base import initialize_model
 from classic_analysis.bert_pipeline.model import BertLinear, BertMLP, BertDeepMLP
 from utils.read_config import load_hyperparams
 
+
 if __name__ == "__main__":
-    model = BertMLP()
+    for model, prefix in zip(
+        [BertLinear, BertDeepMLP, BertMLP], ["_linear", "_mlp_deep", "_mlp"]
+    ):
+        # GRID SEARCH PART
+        hyperparams = load_hyperparams("bert_params.json")
+        trainer = initialize_model(model(), 
+                                save_path=f"./models/bert_multitask_model{prefix}", 
+                                results_path=f"./results/bert/training_results_bert{prefix}.csv")
 
-    hyperparams = load_hyperparams("bert_params.json")
+        best_params, best_val_acc = trainer.train(hyperparams=hyperparams)
 
-    trainer = MultiTaskTrainer(
-        model=model,
-        csv_path="data/memotion_dataset_7k/labels.csv",
-        data_type="text",
-        save_path="./models/bert_multitask_model_mlp",
-        results_path="./results/bert/training_results_bert_mlp.csv",
-        use_mlflow=True,
-    )
-
-    best_params, best_val_acc = trainer.train(hyperparams=hyperparams)
-
-    print(f"Best hyperparameters: {best_params}")
-    print(f"Best validation accuracy: {best_val_acc:.4f}")
+        # TRAIN PART
+        trainer = initialize_model(model(), 
+                                save_path=f"./models/bert_multitask_model{prefix}_final", 
+                                results_path=f"./results/bert/training_results_bert{prefix}_final.csv")
+        trainer.train(hyperparams=[best_params])

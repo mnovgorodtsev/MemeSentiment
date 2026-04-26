@@ -1,25 +1,28 @@
-from classic_analysis.base import MultiTaskTrainer
 from classic_analysis.resnet_pipeline.model import (
     ResNetLinear,
     ResNetAttention,
     ResNetAdaptivePooling,
 )
+from classic_analysis.base import initialize_model
 from utils.read_config import load_hyperparams
 
+
 if __name__ == "__main__":
-    model = ResNetAdaptivePooling()
+    for model, prefix in zip(
+        [ResNetLinear, ResNetAttention, ResNetAdaptivePooling], ["_linear", "_attention", "_pooling"]
+    ):
+        # GRID SEARCH PART
+        hyperparams = load_hyperparams("resnet_params.json")
+        trainer = initialize_model(model(), 
+                                save_path=f"./models/bert_multitask_model{prefix}", 
+                                results_path=f"./results/resnet/training_results_resnet{prefix}.csv",
+                                data_type="image")
 
-    hyperparams = load_hyperparams("resnet_params.json")
+        best_params, best_val_acc = trainer.train(hyperparams=hyperparams)
 
-    trainer = MultiTaskTrainer(
-        model=model,
-        csv_path="data/memotion_dataset_7k/labels.csv",
-        data_type="image",
-        images_dir="data/memotion_dataset_7k/images",
-        save_path="./models/resnet_multitask_model_pooling",
-        results_path="./results/resnet/training_results_resnet_pooling.csv",
-        use_mlflow=False,
-    )
-
-    best_params, best_val_acc = trainer.train(hyperparams=hyperparams)
-    print("Best hyparams", best_params)
+        # TRAIN PART
+        trainer = initialize_model(model(), 
+                                save_path=f"./models/bert_multitask_model{prefix}_final", 
+                                results_path=f"./results/resnet/training_results_resnet{prefix}_final.csv",
+                                data_type="image")
+        trainer.train(hyperparams=[best_params])

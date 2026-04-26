@@ -3,16 +3,15 @@ import time
 import numpy as np
 from typing import Dict
 
-from config import Config
+from utils.read_config import Config
 from vllm_analysis.classifier import MemeClassifier
-from vllm_analysis.prompts import TASKS
+from vllm_analysis.prompts import get_tasks
 from vllm_analysis.helpers import (
     calculate_metrics,
     generate_report,
     save_report,
     save_detailed_results,
 )
-import vllm_analysis.prompts as prompt_module
 from utils.split_dataset import _load_and_split_data
 
 logging.basicConfig(
@@ -27,7 +26,7 @@ def test_model_on_dataset(
     images_base_path: str,
     train_df,
     max_samples: int = None,
-    use_few_shot: bool = False,
+    use_few_shot: bool = True,
 ) -> Dict:
     logger.info(f"\n{'='*60}")
     logger.info(f"Testing model: {model_name}")
@@ -66,7 +65,7 @@ def test_model_on_dataset(
         "duration_seconds": end_time - start_time,
     }
 
-    tasks = prompt_module.get_tasks()
+    tasks = get_tasks()
     
     for task in tasks:
         y_true = np.array(batch_results[task]["true_labels"])
@@ -111,7 +110,7 @@ def main():
             images_base_path=config.images_base_path,
             train_df=train_df,
             max_samples=3,
-            use_few_shot=False,
+            use_few_shot=True,
         )
         all_results.append(result)
 
