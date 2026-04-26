@@ -77,7 +77,7 @@ class LateFusionTrainer:
         resnet_path: str,
         bert_path: str,
         batch_size: int = 32,
-        save_path: str = "./models/late_fusion_model/weights2222.json",
+        save_path: str = "./models/late_fusion_model/weights.json",
         results_path: str = "./results/late_fusion/grid_search_summary.csv",
         mlflow_experiment: str = "LateFusion_GridSearch",
         use_mlflow: bool = True,
