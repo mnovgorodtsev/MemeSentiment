@@ -12,8 +12,8 @@ from classic_analysis.base import MultiTaskModel
 from classic_analysis.base.helpers import compute_mean_std
 from classic_analysis.datasets_preparation import FusionDataset
 from utils.split_dataset import _load_and_split_data
-from classic_analysis.bert_pipeline.model import BertLinear
-from classic_analysis.resnet_pipeline.model import ResNetAdaptivePooling
+from classic_analysis.bert_pipeline.model import BertDeepMLP
+from classic_analysis.resnet_pipeline.model import ResNetLinear
 
 
 def fusion_unpack(batch: dict, device: str) -> tuple[dict, dict]:
@@ -93,8 +93,8 @@ class LateFusionTrainer:
         self.train_df, self.val_df, self.test_df, _ = _load_and_split_data(csv_path)
         self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 
-        self.image_model = ResNetAdaptivePooling()
-        self.text_model = BertLinear()
+        self.image_model = ResNetLinear()
+        self.text_model = BertDeepMLP()
 
         self.image_model.load_state_dict(
             torch.load(resnet_path, map_location=self.device)
@@ -152,11 +152,11 @@ class LateFusionTrainer:
         best_model.save(self.save_path)
         return best_params, best_acc
 
-    def test(self) -> None:
+    def test(self, save_path: str = None) -> None:
         try:
             model = LateFusionModel.load(
                 self.save_path, self.image_model, self.text_model
             )
-            model.print_evaluation(self.test_loader, fusion_unpack)
+            model.print_evaluation(self.test_loader, fusion_unpack, save_path=save_path)
         except Exception as e:
             raise FileNotFoundError(f"First train the weights! {e}")

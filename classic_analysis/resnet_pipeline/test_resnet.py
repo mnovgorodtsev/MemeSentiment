@@ -13,6 +13,7 @@ if __name__ == "__main__":
         ["_attention", "_pooling", "_linear"],
     ):
         trainer = initialize_model(model=model(), 
+                                   save_path=f"./models/resnet_multitask_model{prefix}_final",
                                    test=True,
                                    data_type="image")
-        trainer.test()
+        trainer.test(f"./results/test/resnet_multitask_model{prefix}_final")

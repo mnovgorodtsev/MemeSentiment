@@ -5,7 +5,7 @@ if __name__ == "__main__":
         csv_path="data/memotion_dataset_7k/labels.csv",
         images_dir="data/memotion_dataset_7k/images",
         save_path="./models/early_fusion_model/model_weights.pt",
-        use_mlflow=True,
+        use_mlflow=False,
     )
 
-    trainer.test()
+    trainer.test(f"./results/test/early_fusion_model_final")

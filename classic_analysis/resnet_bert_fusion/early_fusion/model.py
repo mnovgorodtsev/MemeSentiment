@@ -282,8 +282,8 @@ class EarlyFusionTrainer:
         save_results_csv(results, self.results_path)
         return val_acc
 
-    def test(self) -> None:
+    def test(self, save_path: str = None) -> None:
         self.model.load_state_dict(torch.load(self.save_path, map_location=self.device))
         _, y_true, y_pred = self._run_eval_epoch(self.test_loader)
         for task in self.tasks:
-            print_task_metrics(y_true, y_pred, task)
+            print_task_metrics(y_true, y_pred, task, save_path)

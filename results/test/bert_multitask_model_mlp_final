@@ -1,0 +1,76 @@
+
+===== HUMOUR =====
+Accuracy : 0.6495
+Precision: 0.6713
+Recall   : 0.6495
+F1-score : 0.6593
+
+              precision    recall  f1-score   support
+
+           0     0.7873    0.7416    0.7637       534
+           1     0.2959    0.3515    0.3213       165
+
+    accuracy                         0.6495       699
+   macro avg     0.5416    0.5465    0.5425       699
+weighted avg     0.6713    0.6495    0.6593       699
+
+Confusion matrix:
+[[396 138]
+ [107  58]]
+
+===== SARCASM =====
+Accuracy : 0.5365
+Precision: 0.6047
+Recall   : 0.5365
+F1-score : 0.5596
+
+              precision    recall  f1-score   support
+
+           0     0.7282    0.5759    0.6432       507
+           1     0.2785    0.4323    0.3388       192
+
+    accuracy                         0.5365       699
+   macro avg     0.5034    0.5041    0.4910       699
+weighted avg     0.6047    0.5365    0.5596       699
+
+Confusion matrix:
+[[292 215]
+ [109  83]]
+
+===== OFFENSIVE =====
+Accuracy : 0.5236
+Precision: 0.5479
+Recall   : 0.5236
+F1-score : 0.5308
+
+              precision    recall  f1-score   support
+
+           0     0.3946    0.4981    0.4403       263
+           1     0.6403    0.5390    0.5853       436
+
+    accuracy                         0.5236       699
+   macro avg     0.5175    0.5185    0.5128       699
+weighted avg     0.5479    0.5236    0.5308       699
+
+Confusion matrix:
+[[131 132]
+ [201 235]]
+
+===== MOTIVATIONAL =====
+Accuracy : 0.4392
+Precision: 0.5474
+Recall   : 0.4392
+F1-score : 0.4107
+
+              precision    recall  f1-score   support
+
+           0     0.3729    0.7704    0.5025       257
+           1     0.6488    0.2466    0.3574       442
+
+    accuracy                         0.4392       699
+   macro avg     0.5108    0.5085    0.4300       699
+weighted avg     0.5474    0.4392    0.4107       699
+
+Confusion matrix:
+[[198  59]
+ [333 109]]

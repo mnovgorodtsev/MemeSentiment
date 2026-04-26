@@ -119,10 +119,10 @@ class MultiTaskModel(nn.Module):
             for task in self.tasks
         }
 
-    def print_evaluation(self, loader: DataLoader, unpack_fn) -> None:
+    def print_evaluation(self, loader: DataLoader, unpack_fn, save_path: str = None) -> None:
         y_true, y_pred = self.run_inference(loader, unpack_fn)
         for task in self.tasks:
-            print_task_metrics(y_true, y_pred, task)
+            print_task_metrics(y_true, y_pred, task, save_path=save_path)
 
     @staticmethod
     def _mlflow_log_run(
@@ -586,8 +586,8 @@ class MultiTaskTrainer:
             )
         return rows, sum(acc_list) / len(acc_list)
 
-    def test(self) -> None:
-        self.model.print_evaluation(self.test_loader, self._unpack_batch_for_model)
+    def test(self, txt_path: str) -> None:
+        self.model.print_evaluation(self.test_loader, self._unpack_batch_for_model, txt_path)
 
     def _unpack_batch_for_model(self, batch, device) -> tuple[dict, dict]:
         """Adapter unpack_fn compatible with MultiTaskModel.run_inference."""

@@ -14,7 +14,7 @@ if __name__ == "__main__":
         # GRID SEARCH PART
         hyperparams = load_hyperparams("resnet_params.json")
         trainer = initialize_model(model(), 
-                                save_path=f"./models/bert_multitask_model{prefix}", 
+                                save_path=f"./models/resnet_multitask_model{prefix}", 
                                 results_path=f"./results/resnet/training_results_resnet{prefix}.csv",
                                 data_type="image")
 
@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
         # TRAIN PART
         trainer = initialize_model(model(), 
-                                save_path=f"./models/bert_multitask_model{prefix}_final", 
+                                save_path=f"./models/resnet_multitask_model{prefix}_final", 
                                 results_path=f"./results/resnet/training_results_resnet{prefix}_final.csv",
                                 data_type="image")
         trainer.train(hyperparams=[best_params])

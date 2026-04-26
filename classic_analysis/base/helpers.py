@@ -48,17 +48,31 @@ def compute_mean_std(
     print(f"Mean/std cached to {cache_path}.")
     return mean, std
 
-
-def print_task_metrics(y_true: dict, y_pred: dict, task: str) -> None:
-    print(f"\n===== {task.upper()} =====")
+ 
+def print_task_metrics(y_true: dict, y_pred: dict, task: str, save_path: str = None) -> None:
+    output_lines = []
+    output_lines.append(f"\n===== {task.upper()} =====")
+    
     acc = accuracy_score(y_true[task], y_pred[task])
     precision, recall, f1, _ = precision_recall_fscore_support(
         y_true[task], y_pred[task], average="weighted", zero_division=0
     )
-    print(f"Accuracy : {acc:.4f}")
-    print(f"Precision: {precision:.4f}")
-    print(f"Recall   : {recall:.4f}")
-    print(f"F1-score : {f1:.4f}\n")
-    print(classification_report(y_true[task], y_pred[task], digits=4, zero_division=0))
-    print("Confusion matrix:")
-    print(confusion_matrix(y_true[task], y_pred[task]))
+    
+    output_lines.append(f"Accuracy : {acc:.4f}")
+    output_lines.append(f"Precision: {precision:.4f}")
+    output_lines.append(f"Recall   : {recall:.4f}")
+    output_lines.append(f"F1-score : {f1:.4f}\n")
+    
+    clf_report = classification_report(y_true[task], y_pred[task], digits=4, zero_division=0)
+    output_lines.append(clf_report)
+    
+    output_lines.append("Confusion matrix:")
+    output_lines.append(str(confusion_matrix(y_true[task], y_pred[task])))
+    
+    full_output = "\n".join(output_lines)
+    print(full_output)
+    
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        with open(save_path, "a") as f:
+            f.write(full_output + "\n")
