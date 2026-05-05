@@ -15,7 +15,7 @@ def get_tasks() -> list:
     return list(config.get("tasks", {}).keys())
 
 
-def get_prompt_for_task(task: str, meme_text: str) -> str:
+def get_prompt_for_task(task: str, meme_text: str, image_description: str) -> str:
     config = get_classification_config()
     tasks_config = config.get("tasks", {})
 
@@ -25,7 +25,7 @@ def get_prompt_for_task(task: str, meme_text: str) -> str:
         )
 
     template = tasks_config[task].get("user_prompt_template", "")
-    return template.format(meme_text=meme_text)
+    return template.format(meme_text=meme_text, image_description=image_description)
 
 
 def get_positive_class(task: str) -> str:

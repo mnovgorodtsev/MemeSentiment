@@ -3,6 +3,7 @@ import os
 from typing import Dict
 import pandas as pd
 import ollama
+import base64
 
 from vllm_analysis.prompts import get_tasks, get_prompt_for_task, get_few_shot_examples, parse_classification_response
 from utils.read_config import Config
@@ -40,15 +41,42 @@ class MemeClassifier:
         results = {}
         meme_text = str(row.get("text_corrected", "")).strip()
 
+        with open(image_path, "rb") as f:
+            image_data = base64.b64encode(f.read()).decode("utf-8")
+        try:
+            caption_response = self.client.chat(
+                model=self.model_name,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": "Describe this image in detail. Focus on objects, people, text, and meme context.",
+                        "images": [image_data],
+                    }
+                ],
+                stream=False,
+            )
+            image_caption = caption_response["message"]["content"].strip()
+        except Exception as e:
+            logger.error(f"Error generating caption for {image_path}: {e}")
+            image_caption = "caption unavailable"
         for task in tasks:
             try:
-                prompt = get_prompt_for_task(task, meme_text)
+                inputs = {
+                    "meme_text": meme_text,
+                    "image_description": image_caption
+                }
+                prompt = get_prompt_for_task(task, **inputs)
 
                 if use_few_shot and train_df is not None:
                     few_shot_context = get_few_shot_examples(
                         train_df, task, n_shots=2
                     )
-                    prompt = f"{few_shot_context}\n\n{prompt}"
+                    prompt = f"{prompt}\n\n{few_shot_context}"
+
+                prompt = (
+                    f"{prompt}\n\n"
+                    f"IMAGE DESCRIPTION:\n{image_caption}"
+                )
 
                 response = self.client.chat(
                     model=self.model_name,
@@ -56,7 +84,7 @@ class MemeClassifier:
                         {
                             "role": "user",
                             "content": prompt,
-                            "images": [image_path],
+                            "images": [image_data], 
                         }
                     ],
                     stream=False,

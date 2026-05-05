@@ -1,27 +1,25 @@
 {
   "classification_config": {
-    "system_content_template": "You are a meme analyst tasked with binary classification of memes (images with text overlays).\n\nYour goal: Classify the meme into ONE of TWO categories for each dimension.\n\nImportant for memes:\n- Analyze BOTH the visual content AND any readable text in the image (captions, overlays, text).\n- Base your classification ONLY on what is explicit in the meme content.\n- Be decisive and choose clearly between the two categories.\n\nOutput Format: CRITICAL - Respond ONLY with the classification label (exactly as specified in the user prompt). Use only the category names provided, nothing else. No explanations, no extra text, just the label.",
-    
+    "system_content_template": "You are a meme analyst tasked with binary classification of memes (images with text overlays).\n\nYour goal: Classify the meme into ONE of TWO categories for each dimension.\n\nImportant for memes:\n- You are given: (1) the meme text, (2) the image, and (3) a machine-generated description of the image.\n- Use ALL available inputs jointly.\n- The image description is a helpful structured summary of visual content.\n- Base your classification ONLY on provided inputs.\n\nOutput Format: CRITICAL - Respond ONLY with the classification label (exactly as specified in the user prompt). Use only the category names provided, nothing else.",
     "assistant_content_template": "Understood. I will analyze the meme and provide a clear binary classification. I will respond with ONLY the category label as specified in your prompt, with no additional text or explanation.",
     
     "tasks": {
       "humour": {
-        "user_prompt_template": "Classify this meme as EITHER 'funny' OR 'not funny'.\n\nMeme text: \"{meme_text}\"\n\nConsider BOTH the image and the text.\n\nRespond with ONLY one word: funny or not funny",
+        "user_prompt_template": "You are analyzing an internet meme.\n\nFollow these steps internally:\n1. Read meme text.\n2. Read image description.\n3. Combine image + text meaning.\n4. Decide if meme is funny.\n\nMeme text: \"{meme_text}\"\n\nImage description: \"{image_description}\"\n\nRespond with ONLY one word: funny or not funny",
         "categories": ["funny", "not funny"],
         "positive_class": "funny"
       },
       "sarcasm": {
-        "user_prompt_template": "Classify this meme as EITHER 'sarcastic' OR 'not sarcastic'.\n\nMeme text: \"{meme_text}\"\n\nConsider BOTH the image and the text.\n\nRespond with ONLY one word: sarcastic or not sarcastic",
+        "user_prompt_template": "You are analyzing an internet meme.\n\nFollow these steps internally:\n1. Read and understand the text in the meme.\n2. Analyze the visual content of the image.\n3. Use the provided image description to understand visual context.\n4. Interpret how the text and image interact (e.g., contradiction, irony, exaggeration).\n5. Check if the intended meaning is different from or opposite to the literal meaning (a key signal of sarcasm).\n6. Decide if the meme is sarcastic for an average viewer.\n\nMeme text: \"{meme_text}\"\n\nImage description: \"{image_description}\"\n\nImportant:\n- Sarcasm often involves saying something but meaning the opposite.\n- Look for mismatch between text, image, and image description.\n- If there is no clear contradiction or ironic intent, classify as 'not sarcastic'.\n- Do not guess hidden cultural context; rely only on visible content and image description.\n\nRespond with ONLY one word: sarcastic or not sarcastic",
         "categories": ["sarcastic", "not sarcastic"],
         "positive_class": "sarcastic"
       },
       "offensive": {
-        "user_prompt_template": "Classify this meme as EITHER 'offensive' OR 'not offensive'.\n\nMeme text: \"{meme_text}\"\n\nConsider BOTH the image and the text.\n\nRespond with ONLY one word: offensive or not offensive",
-        "categories": ["offensive", "not offensive"],
+        "user_prompt_template": "You are analyzing an internet meme.\n\nFollow these steps internally:\n1. Read and understand the text in the meme.\n2. Analyze the visual content of the image.\n3. Use the provided image description to understand visual context.\n4. Interpret how the text, image, and image description interact.\n5. Check if the meme targets or refers to a person or group.\n6. Determine whether the content could be insulting, demeaning, or hurtful.\n7. Decide if the meme is offensive for an average viewer.\n\nMeme text: \"{meme_text}\"\n\nImage description: \"{image_description}\"\n\nImportant:\n- Offensive content often includes insults, stereotypes, or harmful language toward individuals or groups.\n- Consider both explicit and implicit offensiveness using text, image, and image description.\n- If the content could reasonably offend or hurt someone, classify as 'offensive'.\n- If there is no clear harmful or insulting intent, classify as 'not offensive'.\n- Do not guess hidden cultural context; rely only on visible content and image description.\n\nRespond with ONLY one word: offensive or not offensive",
         "positive_class": "offensive"
       },
       "motivational": {
-        "user_prompt_template": "Classify this meme as EITHER 'motivational' OR 'not motivational'.\n\nMeme text: \"{meme_text}\"\n\nConsider BOTH the image and the text.\n\nRespond with ONLY one word: motivational or not motivational",
+       "user_prompt_template": "You are analyzing an internet meme.\n\nFollow these steps internally:\n1. Read and understand the text in the meme.\n2. Analyze the visual content of the image.\n3. Use the provided image description to understand visual context.\n4. Interpret how the text, image, and image description interact.\n5. Check if the meme encourages action, self-improvement, persistence, or a positive mindset.\n6. Decide if the meme is motivational for an average viewer.\n\nMeme text: \"{meme_text}\"\n\nImage description: \"{image_description}\"\n\nImportant:\n- Motivational content typically inspires action, growth, or perseverance.\n- Positive tone alone is NOT enough; there must be encouragement or a call to improve.\n- Consider motivation based on text, image, and image description together.\n- If the meme does not clearly inspire or encourage, classify as 'not motivational'.\n- Do not guess hidden cultural context; rely only on visible content and image description.\n\nRespond with ONLY one word: motivational or not motivational",
         "categories": ["motivational", "not motivational"],
         "positive_class": "motivational"
       }
