@@ -1,0 +1,65 @@
+====================================================================================================
+MEME CLASSIFICATION BENCHMARK REPORT
+====================================================================================================
+
+MODEL                          mistral
+Dataset Size                   699
+Total Duration                 8784.30 seconds
+----------------------------------------------------------------------------------------------------
+                   HUMOUR                 
+    Accuracy:           0.5079
+    Precision:          0.2122
+    Recall:             0.4000
+    F1-Score:           0.2773
+    Valid Predictions:  699/699
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=66, TN=289, FP=245, FN=99
+                  SARCASM                 
+    Accuracy:           0.3476
+    Precision:          0.2623
+    Recall:             0.7824
+    F1-Score:           0.3929
+    Valid Predictions:  630/699
+    Error Rate:         0.0987
+    Confusion Matrix:   TP=133, TN=86, FP=374, FN=37
+                 OFFENSIVE                
+    Accuracy:           0.4621
+    Precision:          0.6685
+    Recall:             0.2729
+    F1-Score:           0.3876
+    Valid Predictions:  699/699
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=119, TN=204, FP=59, FN=317
+                MOTIVATIONAL              
+    Accuracy:           0.3906
+    Precision:          0.5533
+    Recall:             0.1878
+    F1-Score:           0.2804
+    Valid Predictions:  699/699
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=83, TN=190, FP=67, FN=359
+
+
+====================================================================================================
+SUMMARY - CROSS-MODEL COMPARISON
+====================================================================================================
+
+HUMOUR:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+mistral              0.5079       0.2122       0.4000       0.2773       8784.30     s
+
+SARCASM:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+mistral              0.3476       0.2623       0.7824       0.3929       8784.30     s
+
+OFFENSIVE:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+mistral              0.4621       0.6685       0.2729       0.3876       8784.30     s
+
+MOTIVATIONAL:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+mistral              0.3906       0.5533       0.1878       0.2804       8784.30     s

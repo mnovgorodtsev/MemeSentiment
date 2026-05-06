@@ -1,0 +1,65 @@
+====================================================================================================
+MEME CLASSIFICATION BENCHMARK REPORT
+====================================================================================================
+
+MODEL                          llava:7b
+Dataset Size                   699
+Total Duration                 9417.35 seconds
+----------------------------------------------------------------------------------------------------
+                   HUMOUR                 
+    Accuracy:           0.5093
+    Precision:          0.2443
+    Recall:             0.5152
+    F1-Score:           0.3314
+    Valid Predictions:  699/699
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=85, TN=271, FP=263, FN=80
+                  SARCASM                 
+    Accuracy:           0.4478
+    Precision:          0.2909
+    Recall:             0.7031
+    F1-Score:           0.4116
+    Valid Predictions:  699/699
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=135, TN=178, FP=329, FN=57
+                 OFFENSIVE                
+    Accuracy:           0.4649
+    Precision:          0.6099
+    Recall:             0.3945
+    F1-Score:           0.4791
+    Valid Predictions:  699/699
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=172, TN=153, FP=110, FN=264
+                MOTIVATIONAL              
+    Accuracy:           0.4435
+    Precision:          0.5985
+    Recall:             0.3643
+    F1-Score:           0.4529
+    Valid Predictions:  699/699
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=161, TN=149, FP=108, FN=281
+
+
+====================================================================================================
+SUMMARY - CROSS-MODEL COMPARISON
+====================================================================================================
+
+HUMOUR:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+llava:7b             0.5093       0.2443       0.5152       0.3314       9417.35     s
+
+SARCASM:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+llava:7b             0.4478       0.2909       0.7031       0.4116       9417.35     s
+
+OFFENSIVE:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+llava:7b             0.4649       0.6099       0.3945       0.4791       9417.35     s
+
+MOTIVATIONAL:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+llava:7b             0.4435       0.5985       0.3643       0.4529       9417.35     s
