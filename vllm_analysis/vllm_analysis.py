@@ -13,6 +13,7 @@ from vllm_analysis.helpers import (
     save_detailed_results,
 )
 from utils.split_dataset import _load_and_split_data
+from vllm_analysis.non_open_source import MemeClassifierNonOpenSource
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -27,6 +28,8 @@ def test_model_on_dataset(
     train_df,
     max_samples: int = None,
     use_few_shot: bool = True,
+    classifier_class=None,
+    classifier_kwargs=None,
 ) -> Dict:
     logger.info(f"\n{'='*60}")
     logger.info(f"Testing model: {model_name}")
@@ -37,9 +40,13 @@ def test_model_on_dataset(
     test_subset = test_df.iloc[:max_samples] if max_samples else test_df
     test_size = len(test_subset)
 
-    config = Config()
+    if classifier_class is None:
+        config = Config()
+        classifier_class = MemeClassifier
+        classifier_kwargs = {"host": config.ollama_host, "model_name": model_name}
+
     try:
-        classifier = MemeClassifier(config.ollama_host, model_name)
+        classifier = classifier_class(**classifier_kwargs)
     except RuntimeError as e:
         logger.error(str(e))
         return None
@@ -100,28 +107,59 @@ def main():
     train_df, val_df, test_df, _ = _load_and_split_data(config.memotion_dataset_path)
     logger.info(f"Test set size: {len(test_df)}")
 
-    models_to_test = [config.ollama_model]
     all_results = []
 
-    for model in models_to_test:
-        result = test_model_on_dataset(
-            model_name=model,
-            test_df=test_df,
-            images_base_path=config.images_base_path,
-            train_df=train_df,
-            max_samples=3,
-            use_few_shot=True,
-        )
-        all_results.append(result)
+    result = test_model_on_dataset(
+        model_name=config.ollama_model,
+        test_df=test_df,
+        images_base_path=config.images_base_path,
+        train_df=train_df,
+        max_samples=3,
+        use_few_shot=True,
+    )
+    all_results.append(result)
 
     report = generate_report(all_results)
     print(report)
 
-    save_report(report, "meme_classification_report_2204.txt")
-    save_detailed_results(all_results, "meme_classification_results_2204.json")
+    save_report(report, "meme_classification_report.txt")
+    save_detailed_results(all_results, "meme_classification_results.json")
+
+    logger.info("Benchmark completed!")
+
+
+def main_gpt():
+    logger.info("Starting meme classification benchmark (GPT-4)...")
+
+    config = Config()
+    logger.info(f"Configuration: {config.to_dict()}")
+
+    logger.info(f"Loading dataset from {config.memotion_dataset_path}")
+    train_df, val_df, test_df, _ = _load_and_split_data(config.memotion_dataset_path)
+    logger.info(f"Test set size: {len(test_df)}")
+
+    all_results = []
+
+    result = test_model_on_dataset(
+        model_name="gpt-4.1-mini",
+        test_df=test_df,
+        images_base_path=config.images_base_path,
+        train_df=train_df,
+        max_samples=10,
+        use_few_shot=True,
+        classifier_class=MemeClassifierNonOpenSource,
+        classifier_kwargs={"model_name": "gpt-4.1-mini"},
+    )
+    all_results.append(result)
+
+    report = generate_report(all_results)
+    print(report)
+
+    save_report(report, "meme_classification_report_gpt-4.1-mini.txt")
+    save_detailed_results(all_results, "meme_classification_results_gpt-4.1-mini.json")
 
     logger.info("Benchmark completed!")
 
 
 if __name__ == "__main__":
-    main()
+    main_gpt()

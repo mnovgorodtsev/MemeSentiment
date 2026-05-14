@@ -30,6 +30,68 @@ class MemeClassifier:
                 f"Model '{self.model_name}' not available or Ollama not accessible: {e}"
             )
 
+    def _generate_image_caption(self, image_path: str, image_data: str) -> str:
+        try:
+            caption_response = self.client.chat(
+                model=self.model_name,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": "Describe this image in detail. Focus on objects, people, text, and meme context.",
+                        "images": [image_data],
+                    }
+                ],
+                stream=False,
+            )
+            return caption_response["message"]["content"].strip()
+        except Exception as e:
+            logger.error(f"Error generating caption for {image_path}: {e}")
+            return "caption unavailable"
+
+    def _classify_for_task(
+        self,
+        task: str,
+        meme_text: str,
+        image_caption: str,
+        image_data: str,
+        train_df: pd.DataFrame = None,
+        use_few_shot: bool = False,
+    ) -> str:
+        try:
+            inputs = {
+                "meme_text": meme_text,
+                "image_description": image_caption
+            }
+            prompt = get_prompt_for_task(task, **inputs)
+
+            if use_few_shot and train_df is not None:
+                few_shot_context = get_few_shot_examples(
+                    train_df, task, n_shots=2
+                )
+                prompt = f"{prompt}\n\n{few_shot_context}"
+
+            prompt = (
+                f"{prompt}\n\n"
+                f"IMAGE DESCRIPTION:\n{image_caption}"
+            )
+
+            response = self.client.chat(
+                model=self.model_name,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt,
+                        "images": [image_data], 
+                    }
+                ],
+                stream=False,
+            )
+            return response["message"]["content"].strip().lower()
+
+        except Exception as e:
+            logger.error(f"Error classifying for task '{task}': {e}")
+            return "error"
+
     def classify_meme(
         self,
         row: pd.Series,
@@ -43,102 +105,63 @@ class MemeClassifier:
 
         with open(image_path, "rb") as f:
             image_data = base64.b64encode(f.read()).decode("utf-8")
-        try:
-            caption_response = self.client.chat(
-                model=self.model_name,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": "Describe this image in detail. Focus on objects, people, text, and meme context.",
-                        "images": [image_data],
-                    }
-                ],
-                stream=False,
-            )
-            image_caption = caption_response["message"]["content"].strip()
-        except Exception as e:
-            logger.error(f"Error generating caption for {image_path}: {e}")
-            image_caption = "caption unavailable"
+        
+        image_caption = self._generate_image_caption(image_path, image_data)
+
         for task in tasks:
-            try:
-                inputs = {
-                    "meme_text": meme_text,
-                    "image_description": image_caption
-                }
-                prompt = get_prompt_for_task(task, **inputs)
-
-                if use_few_shot and train_df is not None:
-                    few_shot_context = get_few_shot_examples(
-                        train_df, task, n_shots=2
-                    )
-                    prompt = f"{prompt}\n\n{few_shot_context}"
-
-                prompt = (
-                    f"{prompt}\n\n"
-                    f"IMAGE DESCRIPTION:\n{image_caption}"
-                )
-
-                response = self.client.chat(
-                    model=self.model_name,
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": prompt,
-                            "images": [image_data], 
-                        }
-                    ],
-                    stream=False,
-                )
-                results[task] = response["message"]["content"].strip().lower()
-
-            except Exception as e:
-                logger.error(f"Error classifying {image_path} for task '{task}': {e}")
-                results[task] = "error"
+            results[task] = self._classify_for_task(
+                task=task,
+                meme_text=meme_text,
+                image_caption=image_caption,
+                image_data=image_data,
+                train_df=train_df,
+                use_few_shot=use_few_shot,
+            )
 
         return results
 
     def classify_batch(
-        self,
-        df: pd.DataFrame,
-        images_base_path: str,
-        train_df: pd.DataFrame = None,
-        use_few_shot: bool = False,
-    ) -> Dict[str, list]:
-        tasks = get_tasks()
+            self,
+            df: pd.DataFrame,
+            images_base_path: str,
+            train_df: pd.DataFrame = None,
+            use_few_shot: bool = False,
+        ) -> Dict[str, list]:
+            tasks = get_tasks()
 
-        batch_results = {
-            task: {
-                "predictions": [],
-                "true_labels": [],
-                "raw_responses": [],
-                "sample_ids": [],
+            batch_results = {
+                task: {
+                    "predictions": [],
+                    "true_labels": [],
+                    "raw_responses": [],
+                    "sample_ids": [],
+                }
+                for task in tasks
             }
-            for task in tasks
-        }
 
-        for idx, row in df.iterrows():
-            image_filename = row.get("image_name") or row.get("image")
-            if pd.isna(image_filename):
-                logger.warning(f"No image name for row {idx}")
-                continue
+            for idx, row in df.iterrows():
+                image_filename = row.get("image_name") or row.get("image")
+                if pd.isna(image_filename):
+                    logger.warning(f"No image name for row {idx}")
+                    continue
 
-            image_path = os.path.join(images_base_path, str(image_filename))
+                image_path = os.path.join(images_base_path, str(image_filename))
 
-            if not os.path.exists(image_path):
-                logger.warning(f"Image not found: {image_path}")
-                continue
+                if not os.path.exists(image_path):
+                    logger.warning(f"Image not found: {image_path}")
+                    continue
 
-            responses = self.classify_meme(row, image_path, train_df, use_few_shot)
+                responses = self.classify_meme(row, image_path, train_df, use_few_shot)
 
-            for task in tasks:
-                raw_response = responses.get(task, "error")
-                prediction = parse_classification_response(
-                    raw_response, task
-                )
+                for task in tasks:
+                    raw_response = responses.get(task, "error")
+                    prediction = parse_classification_response(
+                        raw_response, task
+                    )
 
-                batch_results[task]["predictions"].append(prediction)
-                batch_results[task]["true_labels"].append(int(row[task]))
-                batch_results[task]["raw_responses"].append(raw_response)
-                batch_results[task]["sample_ids"].append(idx)
+                    batch_results[task]["predictions"].append(prediction)
+                    batch_results[task]["true_labels"].append(int(row[task]))
+                    batch_results[task]["raw_responses"].append(raw_response)
+                    batch_results[task]["sample_ids"].append(idx)
 
-        return batch_results
+            return batch_results
