@@ -8,6 +8,7 @@ import pandas as pd
 from dotenv import load_dotenv
 from openai import OpenAI
 
+from utils.timer import watch_time
 from vllm_analysis.prompts import (
     get_tasks,
     get_prompt_for_task,
@@ -158,6 +159,7 @@ class OllamaClassifier(BaseClassifier):
                 f"Model '{self.model_name}' not available or Ollama not accessible: {e}"
             )
 
+    @watch_time
     def _generate_image_caption(
         self, image_path: str, image_data: str
     ) -> str:
@@ -167,7 +169,8 @@ class OllamaClassifier(BaseClassifier):
                 messages=[
                     {
                         "role": "user",
-                        "content": "Describe this image in detail. Focus on objects, people, text, and meme context.",
+                        "content": "Describe this image in detail in 4-5 sentences."
+                                   "Focus on objects, people, text, and meme context.",
                         "images": [image_data],
                     }
                 ],
@@ -178,6 +181,7 @@ class OllamaClassifier(BaseClassifier):
             logger.error(f"Error generating caption for {image_path}: {e}")
             return "caption unavailable"
 
+    @watch_time
     def _classify_for_task(
         self,
         task: str,
@@ -229,6 +233,7 @@ class OpenAIClassifier(BaseClassifier):
         self.client = OpenAI(api_key=os.getenv("API_KEY"))
         logger.info(f"Using OpenAI model: {self.model_name}")
 
+    @watch_time
     def _generate_image_caption(
         self, image_path: str, image_data: str
     ) -> str:
@@ -242,7 +247,7 @@ class OpenAIClassifier(BaseClassifier):
                             {
                                 "type": "input_text",
                                 "text": (
-                                    "Describe this meme image in detail. "
+                                    "Describe this image in detail in 4-5 sentences."
                                     "Focus on people, objects, emotions, "
                                     "scene, meme context and visible text."
                                 ),
@@ -271,6 +276,7 @@ class OpenAIClassifier(BaseClassifier):
             )
             return "caption unavailable"
 
+    @watch_time
     def _classify_for_task(
         self,
         task: str,

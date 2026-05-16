@@ -147,11 +147,11 @@ def get_few_shot_examples(train_df, task: str, n_shots: int = 2) -> str:
     )
     examples = pd.concat([class_0_examples, class_1_examples])
 
-    few_shot_text = "Here are some examples:\n\n"
+    few_shot_text = ""
 
     for idx, (_, row) in enumerate(examples.iterrows(), 1):
         label = row[task]
         meme_text = row.get("text_corrected", "[no text]")
-        few_shot_text += f"Example {idx}: \nmeme text:\"{meme_text}\" → label: {label}\n"
+        few_shot_text += f"Example {idx}: \nmeme text: \"{meme_text}\" → label: {label}\n"
 
     return few_shot_text
