@@ -1,5 +1,8 @@
 import logging
-from typing import Dict
+import os
+import base64
+from typing import Dict, List
+import pandas as pd
 from utils.read_config import Config
 
 logger = logging.getLogger(__name__)
@@ -62,6 +65,58 @@ def get_negative_keywords(task: str) -> list:
     return keywords.get(task, [])
 
 
+def get_few_shot_examples_with_images(
+    train_df,
+    task: str,
+    images_base_path: str,
+    n_shots: int = 2,
+) -> List[Dict]:
+
+    shots_per_class = max(1, n_shots // 2)
+
+    class_0_examples = train_df[train_df[task] == 0].sample(
+        n=min(shots_per_class, len(train_df[train_df[task] == 0])),
+        random_state=42
+    )
+
+    class_1_examples = train_df[train_df[task] == 1].sample(
+        n=min(shots_per_class, len(train_df[train_df[task] == 1])),
+        random_state=42
+    )
+
+    examples = pd.concat([class_0_examples, class_1_examples])
+
+    few_shot_list = []
+
+    for _, row in examples.iterrows():
+        image_filename = row.get("image_name") or row.get("image")
+        if pd.isna(image_filename):
+            logger.warning(f"Skipping example without image: {row.get('text_corrected')}")
+            continue
+
+        image_path = os.path.join(images_base_path, str(image_filename))
+
+        if not os.path.exists(image_path):
+            logger.warning(f"Image not found: {image_path}")
+            continue
+
+        try:
+            with open(image_path, "rb") as f:
+                image_base64 = base64.b64encode(f.read()).decode("utf-8")
+        except Exception as e:
+            logger.warning(f"Failed to encode image {image_path}: {e}")
+            continue
+
+        few_shot_list.append({
+            "meme_text": row.get("text_corrected", "[no text]"),
+            "image_base64": image_base64,
+            "image_path": image_path,
+            "label": int(row[task]),
+        })
+
+    return few_shot_list
+
+
 def parse_classification_response(response: str, task: str) -> int:
     if response == "error":
         return -1
@@ -81,8 +136,17 @@ def parse_classification_response(response: str, task: str) -> int:
 
 
 def get_few_shot_examples(train_df, task: str, n_shots: int = 2) -> str:
-    examples = train_df.sample(n=min(n_shots, len(train_df)), random_state=42)
-    
+    shots_per_class = max(1, n_shots // 2)
+    class_0_examples = train_df[train_df[task] == 0].sample(
+        n=min(shots_per_class, len(train_df[train_df[task] == 0])),
+        random_state=42
+    )
+    class_1_examples = train_df[train_df[task] == 1].sample(
+        n=min(shots_per_class, len(train_df[train_df[task] == 1])),
+        random_state=42
+    )
+    examples = pd.concat([class_0_examples, class_1_examples])
+
     few_shot_text = "Here are some examples:\n\n"
 
     for idx, (_, row) in enumerate(examples.iterrows(), 1):

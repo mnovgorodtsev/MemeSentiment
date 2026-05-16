@@ -1,10 +1,11 @@
 import logging
 import time
+import argparse
 import numpy as np
 from typing import Dict
 
 from utils.read_config import Config
-from vllm_analysis.classifier import MemeClassifier
+from vllm_analysis.unified_classifier import create_classifier
 from vllm_analysis.prompts import get_tasks
 from vllm_analysis.helpers import (
     calculate_metrics,
@@ -13,7 +14,6 @@ from vllm_analysis.helpers import (
     save_detailed_results,
 )
 from utils.split_dataset import _load_and_split_data
-from vllm_analysis.non_open_source import MemeClassifierNonOpenSource
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -28,11 +28,12 @@ def test_model_on_dataset(
     train_df,
     max_samples: int = None,
     use_few_shot: bool = True,
-    classifier_class=None,
-    classifier_kwargs=None,
+    model_type: str = "ollama",
+    **kwargs,
 ) -> Dict:
     logger.info(f"\n{'='*60}")
     logger.info(f"Testing model: {model_name}")
+    logger.info(f"Model type: {model_type}")
     logger.info(f"Max samples: {max_samples or 'all'}")
     logger.info(f"Few-shot prompting: {use_few_shot}")
     logger.info(f"{'='*60}")
@@ -40,13 +41,12 @@ def test_model_on_dataset(
     test_subset = test_df.iloc[:max_samples] if max_samples else test_df
     test_size = len(test_subset)
 
-    if classifier_class is None:
-        config = Config()
-        classifier_class = MemeClassifier
-        classifier_kwargs = {"host": config.ollama_host, "model_name": model_name}
-
     try:
-        classifier = classifier_class(**classifier_kwargs)
+        classifier = create_classifier(
+            model_type=model_type,
+            model_name=model_name,
+            **kwargs,
+        )
     except RuntimeError as e:
         logger.error(str(e))
         return None
@@ -97,9 +97,7 @@ def test_model_on_dataset(
     return results
 
 
-def main():
-    logger.info("Starting meme classification benchmark...")
-
+def main(model_type: str = "ollama", max_samples: int = None):
     config = Config()
     logger.info(f"Configuration: {config.to_dict()}")
 
@@ -107,59 +105,59 @@ def main():
     train_df, val_df, test_df, _ = _load_and_split_data(config.memotion_dataset_path)
     logger.info(f"Test set size: {len(test_df)}")
 
-    all_results = []
-
-    result = test_model_on_dataset(
-        model_name=config.ollama_model,
-        test_df=test_df,
-        images_base_path=config.images_base_path,
-        train_df=train_df,
-        max_samples=3,
-        use_few_shot=True,
-    )
-    all_results.append(result)
-
-    report = generate_report(all_results)
-    print(report)
-
-    save_report(report, "meme_classification_report.txt")
-    save_detailed_results(all_results, "meme_classification_results.json")
-
-    logger.info("Benchmark completed!")
-
-
-def main_gpt():
-    logger.info("Starting meme classification benchmark (GPT-4)...")
-
-    config = Config()
-    logger.info(f"Configuration: {config.to_dict()}")
-
-    logger.info(f"Loading dataset from {config.memotion_dataset_path}")
-    train_df, val_df, test_df, _ = _load_and_split_data(config.memotion_dataset_path)
-    logger.info(f"Test set size: {len(test_df)}")
+    if model_type == "ollama":
+        logger.info("Starting meme classification benchmark - Ollama")
+        model_name = config.ollama_model
+        extra_kwargs = {"ollama_host": config.ollama_host}
+    elif model_type == "openai":
+        logger.info("Starting meme classification benchmark - OpenAI")
+        model_name = "gpt-4o-mini"
+        extra_kwargs = {}
+    else:
+        raise ValueError(f"Unknown model_type: {model_type}. Must be 'ollama' or 'openai'")
 
     all_results = []
 
     result = test_model_on_dataset(
-        model_name="gpt-4.1-mini",
+        model_name=model_name,
         test_df=test_df,
         images_base_path=config.images_base_path,
         train_df=train_df,
-        max_samples=10,
+        max_samples=max_samples,
         use_few_shot=True,
-        classifier_class=MemeClassifierNonOpenSource,
-        classifier_kwargs={"model_name": "gpt-4.1-mini"},
+        model_type=model_type,
+        **extra_kwargs,
     )
+
+    if result is None:
+        logger.error("Failed to run benchmark")
+        return
+
     all_results.append(result)
 
     report = generate_report(all_results)
-    print(report)
 
-    save_report(report, "meme_classification_report_gpt-4.1-mini.txt")
-    save_detailed_results(all_results, "meme_classification_results_gpt-4.1-mini.json")
-
-    logger.info("Benchmark completed!")
+    save_report(report, "meme_classification_report_qwen2b.txt")
+    save_detailed_results(all_results, "meme_classification_results_qwen2b.json")
 
 
 if __name__ == "__main__":
-    main_gpt()
+    parser = argparse.ArgumentParser(
+        description="Meme Classification Benchmark"
+    )
+    parser.add_argument(
+        "--model_type",
+        choices=["ollama", "openai"],
+        default="ollama",
+        help="Which model type to use (default: ollama)",
+    )
+    parser.add_argument(
+        "--max_samples",
+        type=int,
+        default=10,
+        help="Maximum number of samples to test (default: 3 for ollama, 10 for openai)",
+    )
+
+    args = parser.parse_args()
+
+    main(model_type=args.model_type, max_samples=args.max_samples)
