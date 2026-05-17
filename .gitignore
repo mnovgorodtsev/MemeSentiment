@@ -12,6 +12,7 @@ venv/
 env/
 
 .idea
+.env
 
 *.db
 
