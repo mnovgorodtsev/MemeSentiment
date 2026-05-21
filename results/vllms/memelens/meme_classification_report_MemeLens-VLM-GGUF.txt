@@ -1,0 +1,65 @@
+====================================================================================================
+MEME CLASSIFICATION BENCHMARK REPORT
+====================================================================================================
+
+MODEL                          MemeLens-VLM
+Dataset Size                   100
+Total Duration                 34988.51 seconds
+----------------------------------------------------------------------------------------------------
+                   HUMOUR                 
+    Accuracy:           0.3700
+    Precision:          0.1857
+    Recall:             0.6842
+    F1-Score:           0.2921
+    Valid Predictions:  100/100
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=13, TN=24, FP=57, FN=6
+                  SARCASM                 
+    Accuracy:           0.5200
+    Precision:          0.2632
+    Recall:             0.3333
+    F1-Score:           0.2941
+    Valid Predictions:  100/100
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=10, TN=42, FP=28, FN=20
+                 OFFENSIVE                
+    Accuracy:           0.3900
+    Precision:          0.7727
+    Recall:             0.2329
+    F1-Score:           0.3579
+    Valid Predictions:  100/100
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=17, TN=22, FP=5, FN=56
+                MOTIVATIONAL              
+    Accuracy:           0.4200
+    Precision:          0.0000
+    Recall:             0.0000
+    F1-Score:           0.0000
+    Valid Predictions:  100/100
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=0, TN=42, FP=0, FN=58
+
+
+====================================================================================================
+SUMMARY - CROSS-MODEL COMPARISON
+====================================================================================================
+
+HUMOUR:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+MemeLens-VLM         0.3700       0.1857       0.6842       0.2921       34988.51    s
+
+SARCASM:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+MemeLens-VLM         0.5200       0.2632       0.3333       0.2941       34988.51    s
+
+OFFENSIVE:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+MemeLens-VLM         0.3900       0.7727       0.2329       0.3579       34988.51    s
+
+MOTIVATIONAL:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+MemeLens-VLM         0.4200       0.0000       0.0000       0.0000       34988.51    s

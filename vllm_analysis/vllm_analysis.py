@@ -113,6 +113,10 @@ def main(model_type: str = "ollama", max_samples: int = None):
         logger.info("Starting meme classification benchmark - OpenAI")
         model_name = "gpt-4o-mini"
         extra_kwargs = {}
+    elif model_type == "llamacpp":
+        logger.info("Starting meme classification benchmark - LlamaCpp")
+        model_name = "MemeLens-VLM"
+        extra_kwargs = {}
     else:
         raise ValueError(f"Unknown model_type: {model_type}. Must be 'ollama' or 'openai'")
 
@@ -137,8 +141,8 @@ def main(model_type: str = "ollama", max_samples: int = None):
 
     report = generate_report(all_results)
 
-    save_report(report, "meme_classification_report_qwen2b.txt")
-    save_detailed_results(all_results, "meme_classification_results_qwen2b.json")
+    save_report(report, "meme_classification_report_MemeLens-VLM-GGUF.txt")
+    save_detailed_results(all_results, "meme_classification_results_MemeLens-VLM-GGUF.json")
 
 
 if __name__ == "__main__":
@@ -147,15 +151,13 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--model_type",
-        choices=["ollama", "openai"],
-        default="ollama",
-        help="Which model type to use (default: ollama)",
+        choices=["ollama", "openai", "llamacpp"],
+        default="llamacpp",
     )
     parser.add_argument(
         "--max_samples",
         type=int,
-        default=10,
-        help="Maximum number of samples to test (default: 3 for ollama, 10 for openai)",
+        default=100,
     )
 
     args = parser.parse_args()
