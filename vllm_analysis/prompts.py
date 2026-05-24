@@ -147,6 +147,15 @@ def get_few_shot_examples(train_df, task: str, n_shots: int = 2) -> str:
     )
     examples = pd.concat([class_0_examples, class_1_examples])
 
+    few_shot_text = (
+        f"Here are {len(examples)} examples of how to classify memes for '{task}':\n\n"
+    )
+    class_1_examples = train_df[train_df[task] == 1].sample(
+        n=min(shots_per_class, len(train_df[train_df[task] == 1])),
+        random_state=42
+    )
+    examples = pd.concat([class_0_examples, class_1_examples])
+
     few_shot_text = ""
 
     for idx, (_, row) in enumerate(examples.iterrows(), 1):

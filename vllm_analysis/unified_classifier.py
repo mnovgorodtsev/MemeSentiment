@@ -2,11 +2,15 @@ import logging
 import os
 import base64
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Dict, Optional
 
 import pandas as pd
 from dotenv import load_dotenv
 from openai import OpenAI
+import ollama
+
+from llama_cpp import Llama
+from llama_cpp.llama_chat_format import Llava15ChatHandler
 
 from utils.timer import watch_time
 from vllm_analysis.prompts import (
@@ -134,11 +138,140 @@ class BaseClassifier(ABC):
         return batch_results
 
 
+class LlamaCppClassifier(BaseClassifier):
+    def __init__(
+        self,
+        model_path: str = None,
+        model_name: str = "MemeLens-VLM",
+        n_gpu_layers: int = -1, 
+        n_ctx: int = 4096,
+        verbose: bool = False,
+    ):
+    
+        self.model_path = model_path
+        self.n_gpu_layers = n_gpu_layers
+        self.n_ctx = n_ctx
+        self.verbose = verbose
+        self.llm = None
+        self.dir = '~/models/MemeLens-VLM'
+        self.model_path=os.path.expanduser(f"{self.dir}/MemeLens-VLM.Q4_K_M.gguf")
+        self.chat_handler = Llava15ChatHandler(
+            clip_model_path=os.path.expanduser(f"{self.dir}/MemeLens-VLM.mmproj-f16.gguf")
+        )
+        
+        super().__init__(model_name)
+
+    def _initialize_client(self) -> None:
+        """Initialize llama-cpp-python client with GPU support."""
+        try:
+            logger.info(
+                f"Loading model from {self.model_path} "
+                f"(GPU layers: {self.n_gpu_layers})..."
+            )
+            
+            self.llm = Llama(
+                model_path=self.model_path,
+                n_gpu_layers=self.n_gpu_layers,
+                n_ctx=self.n_ctx,
+                verbose=self.verbose,
+                chat_handler=self.chat_handler
+            )
+            
+            logger.info(
+                f"Model '{self.model_name}' loaded successfully. "
+                f"Context: {self.n_ctx} tokens"
+            )
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to load model from {self.model_path}: {e}"
+            )
+
+    @watch_time
+    def _generate_image_caption(
+        self, image_path: str, image_data: str
+    ) -> str:
+        try:
+            prompt = (
+                "Describe this image in detail in 4-5 sentences. "
+                "Focus on objects, people, text, and meme context."
+            )
+            response = self.llm.create_chat_completion(
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{image_data}"
+                                },
+                            },
+                        ],
+                    }
+                ],
+                max_tokens=300,
+            )            
+            return response["choices"][0]["message"]["content"].strip()
+        
+        except Exception as e:
+            logger.error(f"Error generating caption for {image_path}: {e}")
+            return "caption unavailable"
+
+    @watch_time
+    def _classify_for_task(
+        self,
+        task: str,
+        meme_text: str,
+        image_caption: str,
+        image_data: str,
+        train_df: pd.DataFrame = None,
+        use_few_shot: bool = False,
+    ) -> str:
+        """Classify meme for a specific task."""
+        try:
+            few_shot_list = []
+            if use_few_shot and train_df is not None:
+                few_shot_list = get_few_shot_examples(
+                    train_df, task, n_shots=2
+                )
+
+            inputs = {
+                "meme_text": meme_text,
+                "image_description": image_caption,
+                "few_shot_examples": few_shot_list,
+            }
+
+            prompt = get_prompt_for_task(task, **inputs)
+
+            response = self.llm.create_chat_completion(
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{image_data}"
+                                },
+                            },
+                        ],
+                    }
+                ],
+                max_tokens=100,
+            )
+            
+            return response["choices"][0]["message"]["content"].strip().lower()
+
+        except Exception as e:
+            logger.error(f"Error classifying for task '{task}': {e}")
+            return "error"
+
+
 class OllamaClassifier(BaseClassifier):
 
     def __init__(self, ollama_host: str = None, model_name: str = None):
-        import ollama
-
         self.ollama = ollama
         self.ollama_host = ollama_host
         super().__init__(model_name or "llama2")
@@ -343,14 +476,22 @@ def create_classifier(
     Factory function to create the appropriate classifier.
 
     Args:
-        model_type: Either "ollama" or "openai"
+        model_type: "ollama", "openai", or "llamacpp"
         model_name: Name of the model to use
         **kwargs: Additional arguments passed to the classifier
+                  For llamacpp: model_path, n_gpu_layers, n_ctx, verbose
 
     Returns:
         An instance of the appropriate classifier
     """
-    if model_type.lower() == "ollama":
+    if model_type.lower() == "llamacpp":
+        return LlamaCppClassifier(
+            model_name=model_name,
+            n_gpu_layers=kwargs.get("n_gpu_layers", -1),
+            n_ctx=kwargs.get("n_ctx", 4096),
+            verbose=kwargs.get("verbose", False),
+        )
+    elif model_type.lower() == "ollama":
         return OllamaClassifier(
             ollama_host=kwargs.get("ollama_host"),
             model_name=model_name,
@@ -360,5 +501,5 @@ def create_classifier(
     else:
         raise ValueError(
             f"Unknown model_type: {model_type}. "
-            f"Must be 'ollama' or 'openai'."
+            f"Must be 'llamacpp', 'ollama', or 'openai'."
         )

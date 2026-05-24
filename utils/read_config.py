@@ -84,10 +84,6 @@ class Config:
         return self.prompts_config.get("classification_config", {})
 
     @property
-    def rating_config(self) -> Dict:
-        return self.prompts_config.get("rating_config", {})
-
-    @property
     def benchmark_config(self) -> Dict:
         return self.prompts_config.get("benchmark_config", {})
 

@@ -1,0 +1,65 @@
+====================================================================================================
+MEME CLASSIFICATION BENCHMARK REPORT
+====================================================================================================
+
+MODEL                          qwen3-vl:8b
+Dataset Size                   100
+Total Duration                 7259.22 seconds
+----------------------------------------------------------------------------------------------------
+                   HUMOUR                 
+    Accuracy:           0.2100
+    Precision:          0.1875
+    Recall:             0.9474
+    F1-Score:           0.3130
+    Valid Predictions:  100/100
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=18, TN=3, FP=78, FN=1
+                  SARCASM                 
+    Accuracy:           0.4700
+    Precision:          0.3231
+    Recall:             0.7000
+    F1-Score:           0.4421
+    Valid Predictions:  100/100
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=21, TN=26, FP=44, FN=9
+                 OFFENSIVE                
+    Accuracy:           0.4300
+    Precision:          0.8333
+    Recall:             0.2740
+    F1-Score:           0.4124
+    Valid Predictions:  100/100
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=20, TN=23, FP=4, FN=53
+                MOTIVATIONAL              
+    Accuracy:           0.4100
+    Precision:          0.0000
+    Recall:             0.0000
+    F1-Score:           0.0000
+    Valid Predictions:  100/100
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=0, TN=41, FP=1, FN=58
+
+
+====================================================================================================
+SUMMARY - CROSS-MODEL COMPARISON
+====================================================================================================
+
+HUMOUR:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+qwen3-vl:8b          0.2100       0.1875       0.9474       0.3130       7259.22     s
+
+SARCASM:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+qwen3-vl:8b          0.4700       0.3231       0.7000       0.4421       7259.22     s
+
+OFFENSIVE:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+qwen3-vl:8b          0.4300       0.8333       0.2740       0.4124       7259.22     s
+
+MOTIVATIONAL:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+qwen3-vl:8b          0.4100       0.0000       0.0000       0.0000       7259.22     s
