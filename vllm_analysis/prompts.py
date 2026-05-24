@@ -147,7 +147,9 @@ def get_few_shot_examples(train_df, task: str, n_shots: int = 2) -> str:
     )
     examples = pd.concat([class_0_examples, class_1_examples])
 
-    few_shot_text = ""
+    few_shot_text = (
+        f"Here are {len(examples)} examples of how to classify memes for '{task}':\n\n"
+    )
 
     for idx, (_, row) in enumerate(examples.iterrows(), 1):
         label = row[task]
