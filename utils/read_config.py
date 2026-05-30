@@ -70,10 +70,18 @@ class Config:
     @property
     def memotion_dataset_path(self) -> str:
         return self.parser.get("datasets", "MEMOTION_DATASET_PATH", fallback="path")
+    
+    @property
+    def polish_dataset_path(self) -> str:
+        return self.parser.get("datasets", "POLISH_DATASET_PATH", fallback="path")
 
     @property
     def images_base_path(self) -> str:
         return self.parser.get("datasets", "IMAGES_BASE_PATH", fallback="path")
+    
+    @property
+    def polish_base_path(self) -> str:
+        return self.parser.get("datasets", "POLISH_IMAGES_BASE_PATH", fallback="path")
 
     @property
     def prompts_config(self) -> Dict:
@@ -86,19 +94,31 @@ class Config:
     @property
     def benchmark_config(self) -> Dict:
         return self.prompts_config.get("benchmark_config", {})
+    
+    @property
+    def results_dir(self) -> str:
+        return self.parser.get("results", "results_dir", fallback="./results/vllms/demo")
 
-    def to_dict(self) -> Dict:
+    @property
+    def model_configs(self) -> Dict:
         return {
             "ollama": {
-                "host": self.ollama_host,
-                "model": self.ollama_model,
+                "log_name": self.parser.get("models", "ollama_log_name", fallback="Ollama"),
+                "model_name": self.parser.get("ollama", "model", fallback="gemma3:latest"),
+                "extra_kwargs": {"ollama_host": self.ollama_host},
             },
-            "server": {
-                "host": self.server_host,
-                "port": self.server_port,
+            "openai": {
+                "log_name": self.parser.get("models", "openai_log_name", fallback="OpenAI"),
+                "model_name": self.parser.get("models", "openai_model_name", fallback="gpt-4o-mini"),
+                "extra_kwargs": {},
             },
-            "dataset": {
-                "path": self.memotion_dataset_path,
-                "images_path": self.images_base_path,
+            "llamacpp": {
+                "log_name": self.parser.get("models", "llamacpp_log_name", fallback="LlamaCpp"),
+                "model_name": self.parser.get("models", "llamacpp_model_name", fallback="MemeLens-VLM"),
+                "extra_kwargs": {},
             },
         }
+    
+    @property
+    def results_classic_dir(self) -> str:
+        return self.parser.get("results", "results_classic_dir", fallback="./results/demo")

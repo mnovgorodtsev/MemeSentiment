@@ -13,6 +13,10 @@ from classic_analysis.base import MultiTaskModel, print_task_metrics
 from classic_analysis.base.helpers import compute_mean_std, save_results_csv
 from classic_analysis.datasets_preparation import FusionDataset
 from utils.split_dataset import _load_and_split_data
+from utils.read_config import Config
+
+
+config = Config()
 
 
 def early_fusion_unpack(batch: dict, device: str) -> tuple[dict, dict]:
@@ -58,8 +62,8 @@ class EarlyFusionModel(MultiTaskModel):
 class EarlyFusionTrainer:
     def __init__(
         self,
-        csv_path: str,
-        images_dir: str,
+        csv_path: str = config.memotion_dataset_path,
+        images_dir: str = config.images_base_path,
         save_path: str = "./models/early_fusion_model/model_weights.pt",
         batch_size: int = 16,
         epochs: int = 10,

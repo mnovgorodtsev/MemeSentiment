@@ -38,6 +38,11 @@ def _load_and_split_data(csv_path, val_size=0.1, test_size=0.1, random_state=42)
     )
 
 
+def _load_and_split_data_polish(csv_path):
+    df = pd.read_csv(csv_path, delimiter=';')
+    return pd.DataFrame(), df
+
+
 def _binarize_labels(df):
     # humour
     df["humour"] = df["humour"].replace(

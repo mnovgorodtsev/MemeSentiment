@@ -14,6 +14,10 @@ from classic_analysis.datasets_preparation import FusionDataset
 from utils.split_dataset import _load_and_split_data
 from classic_analysis.bert_pipeline.model import BertDeepMLP
 from classic_analysis.resnet_pipeline.model import ResNetAttention
+from utils.read_config import Config
+
+
+config = Config()
 
 
 def fusion_unpack(batch: dict, device: str) -> tuple[dict, dict]:
@@ -72,15 +76,17 @@ class LateFusionModel(MultiTaskModel):
 class LateFusionTrainer:
     def __init__(
         self,
-        csv_path: str,
-        images_dir: str,
-        resnet_path: str,
-        bert_path: str,
+        csv_path: str = config.memotion_dataset_path,
+        images_dir: str = config.images_base_path,
+        resnet_path: str = "",
+        bert_path: str = "",
         batch_size: int = 32,
         save_path: str = "./models/late_fusion_model/weights.json",
         results_path: str = "./results/late_fusion/grid_search_summary.csv",
         mlflow_experiment: str = "LateFusion_GridSearch",
         use_mlflow: bool = True,
+        image_model = ResNetAttention(),
+        text_model = BertDeepMLP()
     ) -> None:
         self.images_dir = images_dir
         self.batch_size = batch_size
@@ -93,8 +99,8 @@ class LateFusionTrainer:
         self.train_df, self.val_df, self.test_df, _ = _load_and_split_data(csv_path)
         self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 
-        self.image_model = ResNetAttention()
-        self.text_model = BertDeepMLP()
+        self.image_model = image_model
+        self.text_model = text_model
 
         self.image_model.load_state_dict(
             torch.load(resnet_path, map_location=self.device)

@@ -1,0 +1,17 @@
+kaggle==2.2.0
+matplotlib==3.10.8
+mlflow==3.10.1
+numpy==2.3.5
+ollama==0.6.1
+openai==2.36.0
+openpyxl==3.1.5
+llama-cpp-python==0.3.23
+pandas==2.3.3
+safetensors==0.7.0
+scikit-learn==1.7.2
+seaborn==0.13.2
+tokenizers==0.22.1
+torch==2.10.0
+torchvision==0.25.0
+tqdm==4.67.1
+transformers==4.57.3

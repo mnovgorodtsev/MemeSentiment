@@ -1,0 +1,9 @@
+.venv*
+.git
+data
+models
+mlflow.db
+__pycache__
+*.zip
+*.pt
+*.bin
