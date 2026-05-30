@@ -16,7 +16,7 @@ The main objective of the project is to **compare classical multimodal sentiment
 
 ## Quick Start
 
-The demo runs a representative subset of experiments — fast enough to verify the setup without a full training run. The first build should take around ***10 minutes***.
+The demo runs a representative subset of experiments - fast enough to verify the setup without a full training run. The first build should take around ***10 minutes***.
 
 ### 1. Clone the repository
 
@@ -36,7 +36,7 @@ This downloads and extracts both the English (Memotion 7k) and Polish meme datas
 
 You should see logs after running the process, and at the end you should find a results file in results/vllms/demo, which should match the one posted on GitHub due to the fixed seed.
 
-### 4. Run Classical pipeline demo
+### 3. Run Classical pipeline demo
 
 Train demo models (1 epoch, lightweight config):
 
