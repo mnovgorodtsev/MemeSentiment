@@ -1,0 +1,65 @@
+====================================================================================================
+MEME CLASSIFICATION BENCHMARK REPORT
+====================================================================================================
+
+MODEL                          gemma3:latest
+Dataset Size                   5
+Total Duration                 24.02 seconds
+----------------------------------------------------------------------------------------------------
+                   HUMOUR                 
+    Accuracy:           0.4000
+    Precision:          0.4000
+    Recall:             1.0000
+    F1-Score:           0.5714
+    Valid Predictions:  5/5
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=2, TN=0, FP=3, FN=0
+                  SARCASM                 
+    Accuracy:           0.2000
+    Precision:          0.2000
+    Recall:             1.0000
+    F1-Score:           0.3333
+    Valid Predictions:  5/5
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=1, TN=0, FP=4, FN=0
+                 OFFENSIVE                
+    Accuracy:           0.4000
+    Precision:          0.4000
+    Recall:             1.0000
+    F1-Score:           0.5714
+    Valid Predictions:  5/5
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=2, TN=0, FP=3, FN=0
+                MOTIVATIONAL              
+    Accuracy:           0.6000
+    Precision:          1.0000
+    Recall:             0.3333
+    F1-Score:           0.5000
+    Valid Predictions:  5/5
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=1, TN=2, FP=0, FN=2
+
+
+====================================================================================================
+SUMMARY - CROSS-MODEL COMPARISON
+====================================================================================================
+
+HUMOUR:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+gemma3:latest        0.4000       0.4000       1.0000       0.5714       24.02       s
+
+SARCASM:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+gemma3:latest        0.2000       0.2000       1.0000       0.3333       24.02       s
+
+OFFENSIVE:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+gemma3:latest        0.4000       0.4000       1.0000       0.5714       24.02       s
+
+MOTIVATIONAL:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+gemma3:latest        0.6000       1.0000       0.3333       0.5000       24.02       s

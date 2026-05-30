@@ -94,3 +94,31 @@ class Config:
     @property
     def benchmark_config(self) -> Dict:
         return self.prompts_config.get("benchmark_config", {})
+    
+    @property
+    def results_dir(self) -> str:
+        return self.parser.get("results", "results_dir", fallback="./results/vllms/demo")
+
+    @property
+    def model_configs(self) -> Dict:
+        return {
+            "ollama": {
+                "log_name": self.parser.get("models", "ollama_log_name", fallback="Ollama"),
+                "model_name": self.parser.get("ollama", "model", fallback="gemma3:latest"),
+                "extra_kwargs": {"ollama_host": self.ollama_host},
+            },
+            "openai": {
+                "log_name": self.parser.get("models", "openai_log_name", fallback="OpenAI"),
+                "model_name": self.parser.get("models", "openai_model_name", fallback="gpt-4o-mini"),
+                "extra_kwargs": {},
+            },
+            "llamacpp": {
+                "log_name": self.parser.get("models", "llamacpp_log_name", fallback="LlamaCpp"),
+                "model_name": self.parser.get("models", "llamacpp_model_name", fallback="MemeLens-VLM"),
+                "extra_kwargs": {},
+            },
+        }
+    
+    @property
+    def results_classic_dir(self) -> str:
+        return self.parser.get("results", "results_classic_dir", fallback="./results/demo")

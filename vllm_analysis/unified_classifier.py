@@ -119,7 +119,6 @@ class BaseClassifier(ABC):
             }
             for task in tasks
         }
-        print(df.head())
         for idx, row in df.iterrows():
             image_filename = row.get("image_name") or row.get("image")
             if pd.isna(image_filename):

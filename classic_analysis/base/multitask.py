@@ -28,10 +28,13 @@ from classic_analysis.datasets_preparation import (
     TextMultiTaskDataset,
 )
 
+from utils.read_config import Config
 from utils.split_dataset import _load_and_split_data
 import os
 
 SEED = 42
+
+config = Config()
 
 random.seed(SEED)
 np.random.seed(SEED)
@@ -622,10 +625,10 @@ class MultiTaskTrainer:
 
 
 def initialize_model(model, 
-                     csv_path: str = "data/memotion_dataset_7k/labels.csv",
+                     csv_path: str = config.memotion_dataset_path,
                      save_path: str = "./models/bert_multitask", 
                      results_path: str = "./results/bert/training_results.csv",
-                     images_dir: str = "data/memotion_dataset_7k/images",
+                     images_dir: str = config.images_base_path,
                      data_type: str = "text",
                      test: bool = False):
     trainer = MultiTaskTrainer(

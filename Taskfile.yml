@@ -1,0 +1,120 @@
+version: "3"
+
+vars:
+  MODEL: gemma3:latest
+  SAMPLES: 5
+
+tasks:
+
+  up:
+    desc: "Start Ollama container"
+    cmds:
+      - docker compose up -d ollama --force-recreate
+
+  build:
+    desc: "Build app Docker image"
+    cmds:
+      - docker compose build
+
+  dataset:
+    desc: "Download datasets"
+    cmds:
+      - docker compose run --rm app python -m utils.download_dataset
+
+  setup:
+    desc: "Start Ollama, pull model and download datasets"
+    cmds:
+      - task: up
+      - docker compose exec ollama ollama pull {{.MODEL}}
+      - task: dataset
+
+  vllm:
+    desc: "VLLM benchmark - English dataset"
+    cmds:
+      - task: setup
+      - |
+        docker compose run --rm app \
+        python -m vllm_analysis.vllm_analysis \
+        --model_type ollama \
+        --max_samples {{.SAMPLES}} \
+
+  vllm-pl:
+    desc: "VLLM benchmark - Polish dataset"
+    cmds:
+      - task: setup
+      - |
+        docker compose run --rm app \
+        python -m vllm_analysis.vllm_analysis \
+        --model_type ollama \
+        --max_samples {{.SAMPLES}} \
+        --dataset pl
+
+  classic-demo-train:
+    desc: "Quick train demo - 1 epoch, 1 config per model"
+    cmds:
+      - task: up
+      - task: dataset
+      - docker compose run --rm app python -m classic_analysis.demo_train
+
+  classic-demo-test:
+    desc: "Quick test demo"
+    cmds:
+      - task: up
+      - task: dataset
+      - docker compose run --rm app python -m classic_analysis.demo_test
+
+  bert-train:
+    desc: "Full BERT training pipeline"
+    cmds:
+      - task: up
+      - task: dataset
+      - docker compose run --rm app python -m classic_analysis.bert_pipeline.train_bert
+
+  bert-test:
+    desc: "Full BERT testing pipeline"
+    cmds:
+      - task: up
+      - task: dataset
+      - docker compose run --rm app python -m classic_analysis.bert_pipeline.test_bert
+
+  resnet-train:
+    desc: "Full ResNet training pipeline"
+    cmds:
+      - task: up
+      - task: dataset
+      - docker compose run --rm app python -m classic_analysis.resnet_pipeline.train_resnet
+
+  resnet-test:
+    desc: "Full ResNet testing pipeline"
+    cmds:
+      - task: up
+      - task: dataset
+      - docker compose run --rm app python -m classic_analysis.resnet_pipeline.test_resnet
+
+  early-train:
+    desc: "Full early fusion training pipeline"
+    cmds:
+      - task: up
+      - task: dataset
+      - docker compose run --rm app python -m classic_analysis.resnet_bert_fusion.early_fusion.early_fusion_train
+
+  early-test:
+    desc: "Full early fusion testing pipeline"
+    cmds:
+      - task: up
+      - task: dataset
+      - docker compose run --rm app python -m classic_analysis.resnet_bert_fusion.early_fusion.early_fusion_test
+
+  late-train:
+    desc: "Full late fusion training pipeline"
+    cmds:
+      - task: up
+      - task: dataset
+      - docker compose run --rm app python -m classic_analysis.resnet_bert_fusion.late_fusion.late_fusion_train
+
+  late-test:
+    desc: "Full late fusion testing pipeline"
+    cmds:
+      - task: up
+      - task: dataset
+      - docker compose run --rm app python -m classic_analysis.resnet_bert_fusion.late_fusion.late_fusion_test
