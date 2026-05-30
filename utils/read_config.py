@@ -70,10 +70,18 @@ class Config:
     @property
     def memotion_dataset_path(self) -> str:
         return self.parser.get("datasets", "MEMOTION_DATASET_PATH", fallback="path")
+    
+    @property
+    def polish_dataset_path(self) -> str:
+        return self.parser.get("datasets", "POLISH_DATASET_PATH", fallback="path")
 
     @property
     def images_base_path(self) -> str:
         return self.parser.get("datasets", "IMAGES_BASE_PATH", fallback="path")
+    
+    @property
+    def polish_base_path(self) -> str:
+        return self.parser.get("datasets", "POLISH_IMAGES_BASE_PATH", fallback="path")
 
     @property
     def prompts_config(self) -> Dict:
@@ -86,19 +94,3 @@ class Config:
     @property
     def benchmark_config(self) -> Dict:
         return self.prompts_config.get("benchmark_config", {})
-
-    def to_dict(self) -> Dict:
-        return {
-            "ollama": {
-                "host": self.ollama_host,
-                "model": self.ollama_model,
-            },
-            "server": {
-                "host": self.server_host,
-                "port": self.server_port,
-            },
-            "dataset": {
-                "path": self.memotion_dataset_path,
-                "images_path": self.images_base_path,
-            },
-        }

@@ -40,7 +40,7 @@ class BaseClassifier(ABC):
 
     @abstractmethod
     def _generate_image_caption(
-        self, image_path: str, image_data: str
+        self, image_path: str, image_data: str, english_datast: bool = True
     ) -> str:
         pass
 
@@ -53,6 +53,7 @@ class BaseClassifier(ABC):
         image_data: str,
         train_df: pd.DataFrame = None,
         use_few_shot: bool = False,
+        english_dataset: bool = True
     ) -> str:
         pass
 
@@ -60,6 +61,16 @@ class BaseClassifier(ABC):
     def _encode_image(image_path: str) -> str:
         with open(image_path, "rb") as f:
             return base64.b64encode(f.read()).decode("utf-8")
+        
+    @staticmethod
+    def _get_description_prompt(english_dataset: bool = True):
+        return (
+                "Describe this image in detail in 4-5 sentences. "
+                "Focus on objects, people, text, and meme context."
+            ) if english_dataset else (
+                "Dokładnie opisz to zdjęcie w 4-5 zdaniach."
+                "Skup się na obiektach, ludziach, tekście, oraz kontekście mema."
+            )
 
     def classify_meme(
         self,
@@ -67,13 +78,14 @@ class BaseClassifier(ABC):
         image_path: str,
         train_df: pd.DataFrame = None,
         use_few_shot: bool = False,
+        english_dataset: bool = True
     ) -> Dict[str, str]:
-        tasks = get_tasks()
+        tasks = get_tasks(english_dataset)
         results = {}
-        meme_text = str(row.get("text_corrected", "")).strip()
+        meme_text = str(row.get("text_corrected", "")).strip() if english_dataset else None
 
         image_data = self._encode_image(image_path)
-        image_caption = self._generate_image_caption(image_path, image_data)
+        image_caption = self._generate_image_caption(image_path, image_data, english_dataset)
 
         for task in tasks:
             results[task] = self._classify_for_task(
@@ -83,6 +95,7 @@ class BaseClassifier(ABC):
                 image_data=image_data,
                 train_df=train_df,
                 use_few_shot=use_few_shot,
+                english_dataset=english_dataset
             )
 
         return results
@@ -93,8 +106,9 @@ class BaseClassifier(ABC):
         images_base_path: str,
         train_df: pd.DataFrame = None,
         use_few_shot: bool = False,
+        english_dataset: bool = True
     ) -> Dict[str, list]:
-        tasks = get_tasks()
+        tasks = get_tasks(english_dataset)
 
         batch_results = {
             task: {
@@ -105,7 +119,7 @@ class BaseClassifier(ABC):
             }
             for task in tasks
         }
-
+        print(df.head())
         for idx, row in df.iterrows():
             image_filename = row.get("image_name") or row.get("image")
             if pd.isna(image_filename):
@@ -121,7 +135,7 @@ class BaseClassifier(ABC):
             logger.info(f"Processing sample {idx}")
 
             responses = self.classify_meme(
-                row, image_path, train_df, use_few_shot
+                row, image_path, train_df, use_few_shot, english_dataset
             )
 
             for task in tasks:
@@ -188,19 +202,15 @@ class LlamaCppClassifier(BaseClassifier):
 
     @watch_time
     def _generate_image_caption(
-        self, image_path: str, image_data: str
+        self, image_path: str, image_data: str, english_dataset: bool = True
     ) -> str:
         try:
-            prompt = (
-                "Describe this image in detail in 4-5 sentences. "
-                "Focus on objects, people, text, and meme context."
-            )
             response = self.llm.create_chat_completion(
                 messages=[
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": prompt},
+                            {"type": "text", "text": self._get_description_prompt(english_dataset)},
                             {
                                 "type": "image_url",
                                 "image_url": {
@@ -294,7 +304,7 @@ class OllamaClassifier(BaseClassifier):
 
     @watch_time
     def _generate_image_caption(
-        self, image_path: str, image_data: str
+        self, image_path: str, image_data: str, english_dataset: bool = True
     ) -> str:
         try:
             caption_response = self.client.chat(
@@ -302,8 +312,7 @@ class OllamaClassifier(BaseClassifier):
                 messages=[
                     {
                         "role": "user",
-                        "content": "Describe this image in detail in 4-5 sentences."
-                                   "Focus on objects, people, text, and meme context.",
+                        "content": self._get_description_prompt(english_dataset),
                         "images": [image_data],
                     }
                 ],
@@ -323,6 +332,7 @@ class OllamaClassifier(BaseClassifier):
         image_data: str,
         train_df: pd.DataFrame = None,
         use_few_shot: bool = False,
+        english_dataset: bool = True
     ) -> str:
         try:
             few_shot_list = []
@@ -335,6 +345,7 @@ class OllamaClassifier(BaseClassifier):
                 "meme_text": meme_text,
                 "image_description": image_caption,
                 "few_shot_examples": few_shot_list,
+                "english_dataset": english_dataset
             }
 
             prompt = get_prompt_for_task(task, **inputs)
@@ -368,7 +379,7 @@ class OpenAIClassifier(BaseClassifier):
 
     @watch_time
     def _generate_image_caption(
-        self, image_path: str, image_data: str
+        self, image_path: str, image_data: str, english_dataset: bool = True
     ) -> str:
         try:
             response = self.client.responses.create(
@@ -379,11 +390,7 @@ class OpenAIClassifier(BaseClassifier):
                         "content": [
                             {
                                 "type": "input_text",
-                                "text": (
-                                    "Describe this image in detail in 4-5 sentences."
-                                    "Focus on people, objects, emotions, "
-                                    "scene, meme context and visible text."
-                                ),
+                                "text": self._get_description_prompt(english_dataset),
                             },
                             {
                                 "type": "input_image",
@@ -418,6 +425,7 @@ class OpenAIClassifier(BaseClassifier):
         image_data: str,
         train_df: pd.DataFrame = None,
         use_few_shot: bool = False,
+        english_dataset: bool = True
     ) -> str:
         try:
             few_shot_list = []
@@ -430,6 +438,7 @@ class OpenAIClassifier(BaseClassifier):
                 "meme_text": meme_text,
                 "image_description": image_caption,
                 "few_shot_examples": few_shot_list,
+                "english_dataset": english_dataset
             }
 
             prompt = get_prompt_for_task(task, **inputs)

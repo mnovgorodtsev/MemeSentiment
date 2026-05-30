@@ -13,7 +13,7 @@ from vllm_analysis.helpers import (
     save_report,
     save_detailed_results,
 )
-from utils.split_dataset import _load_and_split_data
+from utils.split_dataset import _load_and_split_data, _load_and_split_data_polish
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -29,6 +29,7 @@ def test_model_on_dataset(
     max_samples: int = None,
     use_few_shot: bool = True,
     model_type: str = "ollama",
+    english_dataset: bool = True,
     **kwargs,
 ) -> Dict:
     logger.info(f"\n{'='*60}")
@@ -57,6 +58,7 @@ def test_model_on_dataset(
         images_base_path,
         train_df=train_df,
         use_few_shot=use_few_shot,
+        english_dataset=english_dataset
     )
     end_time = time.time()
 
@@ -72,7 +74,7 @@ def test_model_on_dataset(
         "duration_seconds": end_time - start_time,
     }
 
-    tasks = get_tasks()
+    tasks = get_tasks(english_dataset)
     
     for task in tasks:
         y_true = np.array(batch_results[task]["true_labels"])
@@ -97,13 +99,19 @@ def test_model_on_dataset(
     return results
 
 
-def main(model_type: str = "ollama", max_samples: int = None):
+def main(model_type: str = "ollama", max_samples: int = None, english_dataset: bool = True):
     config = Config()
-    logger.info(f"Configuration: {config.to_dict()}")
 
-    logger.info(f"Loading dataset from {config.memotion_dataset_path}")
-    train_df, val_df, test_df, _ = _load_and_split_data(config.memotion_dataset_path)
-    logger.info(f"Test set size: {len(test_df)}")
+    if english_dataset:
+        logger.info(f"Loading dataset from {config.memotion_dataset_path}")
+        train_df, _, test_df, _ = _load_and_split_data(config.memotion_dataset_path)
+        base_path = config.images_base_path
+        logger.info(f"Test set size: {len(test_df)}")
+    else:
+        # we don't use test df due to small amount of data
+        logger.info(f"Loading dataset from {config.polish_dataset_path}")
+        train_df, test_df = _load_and_split_data_polish(config.polish_dataset_path)
+        base_path = config.polish_base_path
 
     if model_type == "ollama":
         logger.info("Starting meme classification benchmark - Ollama")
@@ -125,11 +133,12 @@ def main(model_type: str = "ollama", max_samples: int = None):
     result = test_model_on_dataset(
         model_name=model_name,
         test_df=test_df,
-        images_base_path=config.images_base_path,
+        images_base_path=base_path,
         train_df=train_df,
         max_samples=max_samples,
-        use_few_shot=True,
+        use_few_shot=False,
         model_type=model_type,
+        english_dataset=english_dataset,
         **extra_kwargs,
     )
 
@@ -141,8 +150,8 @@ def main(model_type: str = "ollama", max_samples: int = None):
 
     report = generate_report(all_results)
 
-    save_report(report, "meme_classification_report_MemeLens-VLM-GGUF.txt")
-    save_detailed_results(all_results, "meme_classification_results_MemeLens-VLM-GGUF.json")
+    save_report(report, "meme_classification_report_gemma3.txt")
+    save_detailed_results(all_results, "meme_classification_results_gemma3.json")
 
 
 if __name__ == "__main__":
@@ -152,7 +161,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_type",
         choices=["ollama", "openai", "llamacpp"],
-        default="llamacpp",
+        default="ollama",
     )
     parser.add_argument(
         "--max_samples",
@@ -160,6 +169,12 @@ if __name__ == "__main__":
         default=100,
     )
 
+    parser.add_argument(
+        "--english_dataset",
+        type=bool,
+        default=True,
+    )
+
     args = parser.parse_args()
 
-    main(model_type=args.model_type, max_samples=args.max_samples)
+    main(model_type=args.model_type, max_samples=args.max_samples, english_dataset=args.english_dataset)

@@ -1,0 +1,61 @@
+====================================================================================================
+MEME CLASSIFICATION BENCHMARK REPORT
+====================================================================================================
+
+MODEL                          qwen3-vl:8b
+Dataset Size                   100
+Total Duration                 18397.12 seconds
+----------------------------------------------------------------------------------------------------
+                  ZABAWNY                 
+    Accuracy:           0.1818
+    Precision:          0.1667
+    Recall:             0.9412
+    F1-Score:           0.2832
+    Valid Predictions:  99/100
+    Error Rate:         0.0100
+    Confusion Matrix:   TP=16, TN=2, FP=80, FN=1
+                 OBRAZLIWY                
+    Accuracy:           0.7778
+    Precision:          0.0000
+    Recall:             0.0000
+    F1-Score:           0.0000
+    Valid Predictions:  99/100
+    Error Rate:         0.0100
+    Confusion Matrix:   TP=0, TN=77, FP=22, FN=0
+                  OSOBISTY                
+    Accuracy:           0.6000
+    Precision:          0.0000
+    Recall:             0.0000
+    F1-Score:           0.0000
+    Valid Predictions:  100/100
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=0, TN=60, FP=40, FN=0
+                ZASKAKUJACY               
+    Accuracy:           0.2100
+    Precision:          0.0000
+    Recall:             0.0000
+    F1-Score:           0.0000
+    Valid Predictions:  100/100
+    Error Rate:         0.0000
+    Confusion Matrix:   TP=0, TN=21, FP=79, FN=0
+
+
+====================================================================================================
+SUMMARY - CROSS-MODEL COMPARISON
+====================================================================================================
+
+HUMOUR:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+
+SARCASM:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+
+OFFENSIVE:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
+
+MOTIVATIONAL:
+Model                Accuracy     Precision    Recall       F1-Score     Duration    
+--------------------------------------------------------------------------------
