@@ -11,7 +11,7 @@ The main objective of the project is to **compare classical multimodal sentiment
 
 - [Docker](https://www.docker.com/products/docker-desktop) >= 29.2.1 + [Docker Compose](https://docs.docker.com/compose/) >= 5.0.2
 - [Task](https://taskfile.dev/installation/) >= 3.51.1
-
+- [Nvidia Container Tookit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) >= 1.19.1
 ---
 
 ## Quick Start
