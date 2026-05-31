@@ -16,7 +16,9 @@ The main objective of the project is to **compare classical multimodal sentiment
 
 ## Quick Start
 
-The demo runs a representative subset of experiments - fast enough to verify the setup without a full training run. The first build should take around ***10 minutes***.
+The demo runs a representative subset of experiments - fast enough to verify the setup without a full training run. The first build should take around ***10 minutes***. 
+
+> ⚠️ We recommend using a machine equipped with a GPU for optimal performance. However, we have configured the demo to run reasonably fast even on CPU-only systems.
 
 ### 1. Clone the repository
 
@@ -34,7 +36,7 @@ task vllm-pl     # polish dataset, 5 samples
 
 This downloads and extracts both the English (Memotion 7k) and Polish meme datasets, download small gemma3:latest model on Ollama and run sample experiment. You can increase number of samples in Taskfile.yml by changing the variable SAMPLES.
 
-You should see logs after running the process, and at the end you should find a results file in results/vllms/demo, which should match the one posted on GitHub due to the fixed seed.
+After the process finishes, a results file will be available in results/vllms/demo. The results should closely resemble those reported in the GitHub repository. However, slight variations are expected, as VLLM inference cannot be fully controlled through deterministic random seeds.
 
 ### 3. Run Classical pipeline demo
 
@@ -60,7 +62,7 @@ You should see logs after running the process, and at the end you should find a 
 
 Each model has its own task, for example, if you would like to run the whole pipeline for BERT:
 
-> ⚠️ Full training takes several hours and requires a GPU.
+> ⚠️ Full training takes several hours even with GPU.
 
 ```bash
 task bert-train
@@ -106,7 +108,6 @@ MemeSentiment/
 | `task early-test` | Early fusion evaluation |
 | `task late-train` | Late fusion training (requires trained BERT + ResNet) |
 | `task late-test` | Late fusion evaluation |
-| `task shell` | Open shell inside app container |
 
 ---
 
