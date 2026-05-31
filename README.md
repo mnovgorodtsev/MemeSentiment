@@ -9,8 +9,8 @@ The main objective of the project is to **compare classical multimodal sentiment
 
 ## Requirements
 
-- [Docker](https://www.docker.com/products/docker-desktop) + [Docker Compose](https://docs.docker.com/compose/)
-- [Task](https://taskfile.dev/installation/) (task runner)
+- [Docker](https://www.docker.com/products/docker-desktop) >= 29.2.1 + [Docker Compose](https://docs.docker.com/compose/) >= 5.0.2
+- [Task](https://taskfile.dev/installation/) >= 3.51.1
 
 ---
 
