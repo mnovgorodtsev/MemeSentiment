@@ -4,40 +4,44 @@ MEME CLASSIFICATION BENCHMARK REPORT
 
 MODEL                          qwen3-vl:8b
 Dataset Size                   100
-Total Duration                 7259.22 seconds
+Total Duration                 14476.29 seconds
 ----------------------------------------------------------------------------------------------------
-                   HUMOUR                 
-    Accuracy:           0.2100
-    Precision:          0.1875
-    Recall:             0.9474
-    F1-Score:           0.3130
+
+              HUMOUR            
+    Accuracy:           0.4000
+    Precision:          0.1940
+    Recall:             0.6842
+    F1-Score:           0.3023
     Valid Predictions:  100/100
     Error Rate:         0.0000
-    Confusion Matrix:   TP=18, TN=3, FP=78, FN=1
-                  SARCASM                 
-    Accuracy:           0.4700
-    Precision:          0.3231
-    Recall:             0.7000
-    F1-Score:           0.4421
+    TP: 13, TN: 27, FP: 54, FN: 6
+
+             SARCASM            
+    Accuracy:           0.4600
+    Precision:          0.2500
+    Recall:             0.4000
+    F1-Score:           0.3077
     Valid Predictions:  100/100
     Error Rate:         0.0000
-    Confusion Matrix:   TP=21, TN=26, FP=44, FN=9
-                 OFFENSIVE                
-    Accuracy:           0.4300
-    Precision:          0.8333
-    Recall:             0.2740
-    F1-Score:           0.4124
+    TP: 12, TN: 34, FP: 36, FN: 18
+
+            OFFENSIVE           
+    Accuracy:           0.5300
+    Precision:          0.8095
+    Recall:             0.4658
+    F1-Score:           0.5913
     Valid Predictions:  100/100
     Error Rate:         0.0000
-    Confusion Matrix:   TP=20, TN=23, FP=4, FN=53
-                MOTIVATIONAL              
-    Accuracy:           0.4100
-    Precision:          0.0000
-    Recall:             0.0000
-    F1-Score:           0.0000
+    TP: 34, TN: 19, FP: 8, FN: 39
+
+           MOTIVATIONAL         
+    Accuracy:           0.4600
+    Precision:          1.0000
+    Recall:             0.0690
+    F1-Score:           0.1290
     Valid Predictions:  100/100
     Error Rate:         0.0000
-    Confusion Matrix:   TP=0, TN=41, FP=1, FN=58
+    TP: 4, TN: 42, FP: 0, FN: 54
 
 
 ====================================================================================================
@@ -47,19 +51,19 @@ SUMMARY - CROSS-MODEL COMPARISON
 HUMOUR:
 Model                Accuracy     Precision    Recall       F1-Score     Duration    
 --------------------------------------------------------------------------------
-qwen3-vl:8b          0.2100       0.1875       0.9474       0.3130       7259.22     s
+qwen3-vl:8b          0.4000       0.1940       0.6842       0.3023       14476.29    s
 
 SARCASM:
 Model                Accuracy     Precision    Recall       F1-Score     Duration    
 --------------------------------------------------------------------------------
-qwen3-vl:8b          0.4700       0.3231       0.7000       0.4421       7259.22     s
+qwen3-vl:8b          0.4600       0.2500       0.4000       0.3077       14476.29    s
 
 OFFENSIVE:
 Model                Accuracy     Precision    Recall       F1-Score     Duration    
 --------------------------------------------------------------------------------
-qwen3-vl:8b          0.4300       0.8333       0.2740       0.4124       7259.22     s
+qwen3-vl:8b          0.5300       0.8095       0.4658       0.5913       14476.29    s
 
 MOTIVATIONAL:
 Model                Accuracy     Precision    Recall       F1-Score     Duration    
 --------------------------------------------------------------------------------
-qwen3-vl:8b          0.4100       0.0000       0.0000       0.0000       7259.22     s
+qwen3-vl:8b          0.4600       1.0000       0.0690       0.1290       14476.29    s
