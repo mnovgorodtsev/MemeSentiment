@@ -7,16 +7,10 @@ vars:
 tasks:
 
   up:
-    desc: "Start Ollama container"
+    desc: "Start services"
     cmds:
-      - |
-        if docker run --rm --gpus all nvidia/cuda:12.0-base nvidia-smi > /dev/null 2>&1; then
-          echo "GPU detected, enabling GPU support"
-          docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --force-recreate
-        else
-          echo "No GPU detected, running CPU only"
-          docker compose -f docker-compose.yml up -d --force-recreate
-        fi
+      - echo "Starting services..."
+      - docker compose up -d --force-recreate
 
   build:
     desc: "Build app Docker image"
