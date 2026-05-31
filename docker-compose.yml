@@ -6,13 +6,6 @@ services:
     volumes:
       - ollama:/root/.ollama
     restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
 
   app:
     build: .
@@ -23,13 +16,6 @@ services:
     environment:
       - PYTHONPATH=/app
       - OLLAMA_HOST=http://ollama:11434
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-      
+
 volumes:
   ollama:
