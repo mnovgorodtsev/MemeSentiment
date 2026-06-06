@@ -12,6 +12,13 @@
 |`config/`|Hyperparameter grids|YAML|
 |`results/`|Metrics, logs, model artifacts|MLflow, JSON/CSV|
 
+## Datasets
+
+| Dataset | Source | License |
+|-|-|-|
+| Memotion Dataset 7k | [Kaggle – williamscott701](https://www.kaggle.com/datasets/williamscott701/memotion-dataset-7k) | Non-commercial, citation required |
+| Polish Meme Dataset | [Kaggle – kaszkai](https://www.kaggle.com/datasets/kaszkai/polish-meme-dataset) | Apache 2.0 |
+
 
 
 
